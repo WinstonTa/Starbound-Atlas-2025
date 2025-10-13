@@ -17,4 +17,4 @@ class MenuParsing(BaseModel):
     restaurant_name: Optional[str] = Field(None, description = "Restaurant/bar name")
     deals: List[Deal] = Field(..., description = "List of deals that are extracted")
     time_frame: List[TimeWindow] = Field(default_factory = list, description = "When the deal is available")
-    special_conditions: Optional[str] = Field(None, description = "Additional restrictions or requirements")
+    special_conditions: Optional[List[str]] = Field(None, description = "Additional restrictions or requirements as bullet points")

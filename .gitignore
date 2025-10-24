@@ -41,3 +41,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Lucas's personal programming notes folder
+/notes

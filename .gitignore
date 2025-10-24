@@ -44,3 +44,6 @@ app-example
 
 # Lucas's personal programming notes folder
 /notes
+
+#.vscode folder
+/.vscode

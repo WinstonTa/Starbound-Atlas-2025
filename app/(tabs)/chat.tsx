@@ -5,5 +5,5 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#d2d445ff' },
+  container: { flex: 1, backgroundColor: '#eeea04ff' },
 });

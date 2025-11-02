@@ -30,7 +30,7 @@ backend/
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Node.js 18+
@@ -58,7 +58,7 @@ backend/
 
 ---
 
-## 📦 What's Included
+##  What's Included
 
 ### Cloud Functions
 - **`extractDealFromImage`** - Integrates with AI team's FastAPI service to parse menu images
@@ -100,7 +100,7 @@ See `docs/` folder for:
 
 ---
 
-## 🧪 Testing
+##  Testing
 
 Test locally with Firebase Emulator Suite:
 ```bash
@@ -111,7 +111,7 @@ Access Emulator UI: http://localhost:4000
 
 ---
 
-## 🚢 Deployment
+##  Deployment
 
 Deploy to Firebase:
 ```bash
@@ -127,20 +127,20 @@ firebase deploy --only firestore:indexes
 
 ---
 
-## 📋 Shared Resources
+##  Shared Resources
 
 - **`../shared-schemas.ts`** - TypeScript types shared by all teams
 - **`../fake_venues.json`** - Test data
 
 ---
 
-## 👥 Team
+##  Team
 
 Backend team maintains this directory.
 
 ---
 
-## 🔧 Configuration
+##  Configuration
 
 - Project: `happy-hour-mvp`
 - Region: `us-central1`

@@ -1,0 +1,26 @@
+# Firebase
+firebase-debug.log
+firestore-debug.log
+*.log
+
+# Node modules (functions will install their own)
+functions/node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files (if you don't want to commit them)
+# Uncomment below if you want to exclude test files:
+# test*.js
+

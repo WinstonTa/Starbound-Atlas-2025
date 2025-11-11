@@ -45,3 +45,6 @@ temp_*.jpeg
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Firebase credentials
+happy_hour_service_account.json

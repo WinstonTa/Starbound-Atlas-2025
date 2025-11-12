@@ -4,13 +4,13 @@ import ListBox from "../components/ListBox";
 
 export default function ListScreen() {
   return (
-
     <ScrollView>
       <View style={styles.container}>
         <View style={styles.listContainer}>
-          {/*mapping json file info into boxes*/}
-          {data.map((venue) => (
+          {/* mapping JSON file info into boxes */}
+          {data.map((venue, index) => (
             <ListBox
+              key={venue.venue_id || index}  // ✅ unique key added
               venue_name={venue.venue_name}
               address={venue.address}
               deal={venue.deals}
@@ -21,6 +21,7 @@ export default function ListScreen() {
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

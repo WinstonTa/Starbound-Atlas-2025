@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
-import ListBox from "../../components/ListBox";
-import data from '../../assets/data/fake_venues.json';
+import data from '../assets/data/fake_venues.json';
+import ListBox from "../components/ListBox";
 
 export default function ListScreen() {
   return (

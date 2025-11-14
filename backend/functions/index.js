@@ -5,8 +5,18 @@
  */
 
 const { extractDealFromImage } = require('./extractDealFromImage');
+const { getVenueWithDeals } = require('./getVenueWithDeals');
+const { getAllVenuesWithDeals } = require('./getAllVenuesWithDeals');
 
 module.exports = {
   extractDealFromImage,
+  getVenueWithDeals,
+  getAllVenuesWithDeals,
 };
+
+
+
+
+
+
 

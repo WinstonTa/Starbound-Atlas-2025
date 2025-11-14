@@ -200,6 +200,49 @@ export interface FirestoreBusiness {
 }
 
 // ============================================
+// FRONTEND RESPONSE FORMAT
+// ============================================
+// This is the format frontend expects when querying venues with deals
+// This is a flattened/denormalized view for easy consumption
+
+export interface FrontendDeal {
+  /** Deal item name */
+  name: string;
+  /** Price as string */
+  price: string;
+  /** Optional description */
+  description?: string | null;
+  /** Start time (e.g., "4:00 PM" or "17:00") */
+  start_time: string;
+  /** End time (e.g., "7:00 PM" or "19:00") */
+  end_time: string;
+  /** Days when deal is active */
+  days: string[];
+  /** Special conditions/restrictions */
+  special_conditions?: string[] | null;
+}
+
+export interface FrontendVenueWithDeals {
+  /** Venue ID */
+  venue_id: string;
+  /** Venue name */
+  venue_name: string;
+  /** Latitude */
+  latitude: number;
+  /** Longitude */
+  longitude: number;
+  /** Address object */
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+  };
+  /** Array of deals at this venue */
+  deals: FrontendDeal[];
+}
+
+// ============================================
 // FRONTEND-BACKEND API CONTRACTS
 // ============================================
 // Cloud Functions that frontend will call
@@ -231,12 +274,53 @@ export interface ExtractDealFromImageInput {
 export interface ExtractDealFromImageOutput {
   /** Whether extraction was successful */
   success: boolean;
-  /** Created deal document (if successful) */
+  /** Venue with deals in frontend format (if venueId provided) */
+  venue?: FrontendVenueWithDeals | null;
+  /** Created deal document in Firestore format (for reference) */
   deal?: FirestoreDeal;
   /** Error message (if failed) */
   error?: string;
   /** AI extraction result (for debugging) */
   aiResult?: AIMenuParsing;
+}
+
+/**
+ * Cloud Function: getVenueWithDeals
+ * 
+ * Frontend calls this to get venue data in their expected format.
+ * Returns venue with nested deals matching frontend schema.
+ */
+export interface GetVenueWithDealsInput {
+  /** Venue ID to fetch */
+  venueId: string;
+}
+
+export interface GetVenueWithDealsOutput {
+  /** Whether request was successful */
+  success: boolean;
+  /** Venue with deals in frontend format */
+  venue?: FrontendVenueWithDeals | null;
+  /** Error message (if failed) */
+  error?: string;
+}
+
+/**
+ * Cloud Function: getAllVenuesWithDeals
+ * 
+ * Frontend calls this to get ALL venues with their deals in frontend format.
+ * This is the main API endpoint matching the fake_venues.json structure.
+ */
+export interface GetAllVenuesWithDealsInput {
+  /** No input required - returns all venues */
+}
+
+export interface GetAllVenuesWithDealsOutput {
+  /** Whether request was successful */
+  success: boolean;
+  /** Array of all venues with deals in frontend format */
+  venues: FrontendVenueWithDeals[];
+  /** Error message (if failed) */
+  error?: string;
 }
 
 /**
@@ -331,4 +415,90 @@ export function convertAIToFirestore(aiResult: AIMenuParsing): {
     specialConditions: aiResult.special_conditions ?? null,
   };
 }
+
+/**
+ * Convert Firestore format to Frontend response format
+ * 
+ * This transforms our normalized Firestore structure (venues + deals as separate collections)
+ * into the frontend's desired flattened format (venue with nested deals).
+ * 
+ * @param venue Firestore venue document
+ * @param deals Array of Firestore deal documents for this venue
+ * @returns Frontend-formatted venue with deals
+ */
+export function convertToFrontendFormat(
+  venue: FirestoreVenue,
+  deals: FirestoreDeal[]
+): FrontendVenueWithDeals {
+  // Convert 24h time back to 12h format for frontend (or keep as-is if they prefer 24h)
+  const formatTimeForFrontend = (time24h: string): string => {
+    // If already in 12h format, return as-is
+    if (time24h.toUpperCase().includes("AM") || time24h.toUpperCase().includes("PM")) {
+      return time24h;
+    }
+    
+    // Convert 24h to 12h format
+    const [hours, minutes] = time24h.split(":");
+    const hour24 = parseInt(hours);
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    const period = hour24 >= 12 ? "PM" : "AM";
+    return `${hour12}:${minutes || "00"} ${period}`;
+  };
+
+  // Convert days back to capitalized format
+  const capitalizeDays = (days: string[]): string[] => {
+    return days.map(day => day.charAt(0).toUpperCase() + day.slice(1).toLowerCase());
+  };
+
+  // Transform deals: flatten timeFrames into individual deal items
+  const frontendDeals: FrontendDeal[] = [];
+  
+  for (const deal of deals) {
+    // If deal has multiple timeFrames, create separate deal entries for each
+    if (deal.extractedData.timeFrames && deal.extractedData.timeFrames.length > 0) {
+      for (const timeFrame of deal.extractedData.timeFrames) {
+        // For each deal item, create an entry with this timeFrame
+        for (const dealItem of deal.extractedData.deals) {
+          frontendDeals.push({
+            name: dealItem.name,
+            price: dealItem.price,
+            description: dealItem.description ?? null,
+            start_time: formatTimeForFrontend(timeFrame.startTime),
+            end_time: formatTimeForFrontend(timeFrame.endTime),
+            days: capitalizeDays(timeFrame.days),
+            special_conditions: deal.extractedData.specialConditions ?? null,
+          });
+        }
+      }
+    } else {
+      // If no timeFrames, create deals without time info (or use defaults)
+      for (const dealItem of deal.extractedData.deals) {
+        frontendDeals.push({
+          name: dealItem.name,
+          price: dealItem.price,
+          description: dealItem.description ?? null,
+          start_time: "", // No time info available
+          end_time: "",
+          days: [],
+          special_conditions: deal.extractedData.specialConditions ?? null,
+        });
+      }
+    }
+  }
+
+  return {
+    venue_id: venue.id,
+    venue_name: venue.name,
+    latitude: venue.latitude,
+    longitude: venue.longitude,
+    address: venue.address,
+    deals: frontendDeals,
+  };
+}
+
+
+
+
+
+
 

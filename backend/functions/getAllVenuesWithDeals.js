@@ -1,0 +1,159 @@
+/**
+ * Cloud Function: getAllVenuesWithDeals
+ * 
+ * Returns ALL venues with their deals in frontend's expected format.
+ * This is the main API endpoint for frontend to get all venue data.
+ * 
+ * Input:
+ * {}  // No input required
+ * 
+ * Output:
+ * {
+ *   success: boolean,
+ *   venues: FrontendVenueWithDeals[],  // Array of venues in frontend format
+ *   error?: string
+ * }
+ */
+
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
+const db = admin.firestore();
+
+/**
+ * Convert Firestore format to Frontend response format
+ * (Reused from getVenueWithDeals.js)
+ */
+function convertToFrontendFormat(venue, deals) {
+  // Convert 24h time back to 12h format for frontend
+  const formatTimeForFrontend = (time24h) => {
+    if (!time24h) return "";
+    // If already in 12h format, return as-is
+    if (time24h.toUpperCase().includes("AM") || time24h.toUpperCase().includes("PM")) {
+      return time24h;
+    }
+    
+    // Convert 24h to 12h format
+    const [hours, minutes] = time24h.split(":");
+    const hour24 = parseInt(hours);
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    const period = hour24 >= 12 ? "PM" : "AM";
+    return `${hour12}:${minutes || "00"} ${period}`;
+  };
+
+  // Convert days back to capitalized format
+  const capitalizeDays = (days) => {
+    if (!days || days.length === 0) return [];
+    return days.map(day => day.charAt(0).toUpperCase() + day.slice(1).toLowerCase());
+  };
+
+  // Transform deals: flatten timeFrames into individual deal items
+  const frontendDeals = [];
+  
+  for (const deal of deals) {
+    // If deal has multiple timeFrames, create separate deal entries for each
+    if (deal.extractedData && deal.extractedData.timeFrames && deal.extractedData.timeFrames.length > 0) {
+      for (const timeFrame of deal.extractedData.timeFrames) {
+        // For each deal item, create an entry with this timeFrame
+        if (deal.extractedData.deals && deal.extractedData.deals.length > 0) {
+          for (const dealItem of deal.extractedData.deals) {
+            frontendDeals.push({
+              name: dealItem.name,
+              price: dealItem.price,
+              description: dealItem.description || null,
+              start_time: formatTimeForFrontend(timeFrame.startTime),
+              end_time: formatTimeForFrontend(timeFrame.endTime),
+              days: capitalizeDays(timeFrame.days),
+              special_conditions: deal.extractedData.specialConditions || null,
+            });
+          }
+        }
+      }
+    } else {
+      // If no timeFrames, create deals without time info
+      if (deal.extractedData && deal.extractedData.deals && deal.extractedData.deals.length > 0) {
+        for (const dealItem of deal.extractedData.deals) {
+          frontendDeals.push({
+            name: dealItem.name,
+            price: dealItem.price,
+            description: dealItem.description || null,
+            start_time: "",
+            end_time: "",
+            days: [],
+            special_conditions: deal.extractedData.specialConditions || null,
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    venue_id: venue.id,
+    venue_name: venue.name,
+    latitude: venue.latitude,
+    longitude: venue.longitude,
+    address: venue.address,
+    deals: frontendDeals,
+  };
+}
+
+exports.getAllVenuesWithDeals = functions.https.onCall(async (data, context) => {
+  try {
+    // Step 1: Get all venues
+    const venuesSnapshot = await db.collection('venues').get();
+    
+    if (venuesSnapshot.empty) {
+      return {
+        success: true,
+        venues: [],
+      };
+    }
+
+    const venues = venuesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // Step 2: Get all active deals (grouped by venueId)
+    const dealsSnapshot = await db.collection('deals')
+      .where('active', '==', true)
+      .get();
+
+    // Group deals by venueId
+    const dealsByVenueId = {};
+    dealsSnapshot.docs.forEach(doc => {
+      const deal = { id: doc.id, ...doc.data() };
+      const venueId = deal.venueId;
+      if (!dealsByVenueId[venueId]) {
+        dealsByVenueId[venueId] = [];
+      }
+      dealsByVenueId[venueId].push(deal);
+    });
+
+    // Step 3: Convert each venue to frontend format
+    const frontendVenues = venues.map(venue => {
+      const venueDeals = dealsByVenueId[venue.id] || [];
+      return convertToFrontendFormat(venue, venueDeals);
+    });
+
+    return {
+      success: true,
+      venues: frontendVenues,
+    };
+
+  } catch (error) {
+    console.error('Error in getAllVenuesWithDeals:', error);
+    
+    return {
+      success: false,
+      venues: [],
+      error: error.message,
+    };
+  }
+});
+

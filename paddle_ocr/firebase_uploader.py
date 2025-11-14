@@ -1,25 +1,43 @@
 """
 Firebase Uploader for Menu Extraction
 Extracts menu information using OCR + Gemini and uploads to Firestore
+Also supports standalone Gemini parser integration
 """
 import os
+import sys
 from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
-from happy_hour_gemini import HappyHourGeminiOCR
+from typing import Optional, Dict, Any
+
+# Support both paddle_ocr and gemini_parser
+try:
+    from happy_hour_gemini import HappyHourGeminiOCR
+    PADDLE_OCR_AVAILABLE = True
+except ImportError:
+    PADDLE_OCR_AVAILABLE = False
+
+# Add gemini_parser to path if needed
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'ai', 'gemini_parser'))
+try:
+    from models import MenuParsing
+    GEMINI_PARSER_AVAILABLE = True
+except ImportError:
+    GEMINI_PARSER_AVAILABLE = False
 
 
 class FirebaseUploader:
     """Handles OCR extraction and Firebase Firestore uploads"""
 
-    def __init__(self, service_account_path=None):
+    def __init__(self, service_account_path=None, use_ocr=True):
         """
         Initialize Firebase connection and OCR extractor
 
         Args:
             service_account_path: Path to Firebase service account JSON file
                                  If None, reads from FIREBASE_SERVICE_ACCOUNT env variable
+            use_ocr: Whether to initialize OCR extractor (default: True)
         """
         # Load environment variables
         load_dotenv()
@@ -52,9 +70,14 @@ class FirebaseUploader:
         self.db = firestore.client()
         print("[OK] Connected to Firestore")
 
-        # Initialize OCR extractor
-        self.ocr = HappyHourGeminiOCR(use_gpu=False)
-        print("[OK] OCR + Gemini AI ready")
+        # Initialize OCR extractor (optional)
+        self.ocr = None
+        if use_ocr:
+            if PADDLE_OCR_AVAILABLE:
+                self.ocr = HappyHourGeminiOCR(use_gpu=False)
+                print("[OK] OCR + Gemini AI ready")
+            else:
+                print("[WARNING] OCR not available - happy_hour_gemini module not found")
 
     def upload_menu(self, image_path, collection='restaurants', method='hybrid'):
         """
@@ -197,6 +220,84 @@ class FirebaseUploader:
                 })
 
         return results
+
+    def upload_deals(
+        self,
+        menu_data: 'MenuParsing',
+        collection: str = 'final_schema',
+        venue_info: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Upload parsed deal data to Firestore (for Gemini parser)
+
+        Args:
+            menu_data: Parsed menu data from Gemini (MenuParsing object)
+            collection: Firestore collection name (default: 'final_schema')
+            venue_info: Optional venue information dict with:
+                - venue_id: Unique identifier
+                - venue_name: Name of the venue
+                - latitude: Venue latitude
+                - longitude: Venue longitude
+                - address: Dict with street, city, state, zip
+
+        Returns:
+            str: Document ID of uploaded data
+        """
+        print(f"\n{'='*70}")
+        print(f"Uploading deals from: {menu_data.restaurant_name or 'Unknown'}")
+        print(f"{'='*70}\n")
+
+        # Transform deals to match schema
+        deals = []
+        for deal in menu_data.deals:
+            # Get time frame info (use first time window if available)
+            time_info = {}
+            if menu_data.time_frame and len(menu_data.time_frame) > 0:
+                first_window = menu_data.time_frame[0]
+                time_info = {
+                    'start_time': first_window.start_time,
+                    'end_time': first_window.end_time,
+                    'days': first_window.days or []
+                }
+
+            deal_obj = {
+                'name': deal.name,
+                'price': deal.price,
+                'description': deal.description,
+                **time_info,
+                'special_conditions': menu_data.special_conditions or []
+            }
+            deals.append(deal_obj)
+
+        # Build the document structure matching your exact schema
+        # Add venue information (null by default, can be overwritten later)
+        document = {
+            'venue_id': venue_info.get('venue_id') if venue_info else None,
+            'venue_name': venue_info.get('venue_name') if venue_info else None,
+            'latitude': venue_info.get('latitude') if venue_info else None,
+            'longitude': venue_info.get('longitude') if venue_info else None,
+            'address': venue_info.get('address', {}) if venue_info else {},
+            'deals': deals
+        }
+
+        # Display extracted info
+        print(f"Venue: {document.get('venue_name', 'Not specified')}")
+        print(f"Deals: {len(deals)} items")
+        for i, deal in enumerate(deals, 1):
+            print(f"  {i}. {deal['name']} - {deal['price']}")
+
+        # Upload to Firestore
+        print(f"\n{'='*70}")
+        print("Uploading to Firestore...")
+        print(f"{'='*70}\n")
+
+        doc_ref = self.db.collection(collection).add(document)
+        doc_id = doc_ref[1].id
+
+        print(f"[OK] Uploaded to Firestore: {collection}/{doc_id}")
+        print(f"{'='*70}\n")
+
+        return doc_id
 
 
 def main():

@@ -20,7 +20,23 @@ functions/node_modules/
 .DS_Store
 Thumbs.db
 
-# Test files (if you don't want to commit them)
-# Uncomment below if you want to exclude test files:
-# test*.js
+# Test files (don't commit test scripts)
+test*.js
+
+# Documentation files (for reference only, not committed)
+*.md
+docs/**/*.md
+
+# Populate script (utility, not needed in repo)
+populateDatabase.js
+
+# Service account keys (sensitive)
+service-account-key.json
+**/service-account-key.json
+
+
+
+
+
+
 

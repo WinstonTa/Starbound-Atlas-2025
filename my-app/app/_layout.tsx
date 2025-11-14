@@ -1,16 +1,44 @@
-import { Stack } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { Tabs } from 'expo-router';
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
+export default function TabLayout() {
   return (
-    <Stack
+    <Tabs
       screenOptions={{
         headerShown: false,
-      }}
-    >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
+        tabBarStyle: {
+          backgroundColor: 'white',
+        },
+        tabBarLabelStyle: {
+          color: 'black',
+        },
+      }}>
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: 'Map',
+          tabBarLabel: 'Map',
+        }}
+      />
+      <Tabs.Screen
+        name="list"
+        options={{
+          title: 'List',
+          tabBarLabel: 'List',
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chat',
+          tabBarLabel: 'Chat',
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null, // This hides the tab
+        }}
+      />
+    </Tabs>
   );
 }

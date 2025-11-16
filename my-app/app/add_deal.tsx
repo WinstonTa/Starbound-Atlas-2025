@@ -34,34 +34,71 @@ export default function AddDealScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}> Snap the Deal! </Text>
-
-      {/*take photo and display*/}
       {photoUri ? (
-        <Image source={{ uri: photoUri }} style={styles.preview} />
+        <>
+          {/* displays image preview, retake and confirm image options*/}
+          <Image source={{ uri: photoUri }} style={styles.preview} />
+          <View style={styles.buttonRow}>
+            <View style={styles.buttonWrapper}>
+              <Button title="Retake" onPress={() => setPhotoUri(null)} />
+            </View>
+            <View style={styles.buttonWrapper}>
+              <Button title="Confirm" onPress={() => {}} />
+            </View>
+          </View>
+        </>
       ) : (
-        <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+        <>
+          {/* shows camera and take photo button*/}
+          <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+          <View style={styles.captureButton}>
+            <Button title="Take Photo" onPress={takePhoto} />
+          </View>
+        </>
       )}
-  
-      {/* button to take photo with */}
-      <View style={styles.buttonContainer}>
-        <Button
-          title={photoUri ? "Retake" : "Take Photo"}
-          onPress={() => {
-            if (photoUri) setPhotoUri(null);
-            else takePhoto();
-          }}
-        />
-      </View>
     </View>
   );
+
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", backgroundColor: '#F4EAE1', },
-  title: { textAlign: 'center', paddingBottom: 10, fontSize: 30},
-  message: { textAlign: "center", paddingBottom: 10 },
-  camera: { width: '90%', height: '70%', justifyContent: 'center', alignSelf: 'center',},
-  preview: { width: '90%', height: '70%', justifyContent: 'center', alignSelf: 'center',},
-  buttonContainer: { position: "absolute", bottom: 40, alignSelf: "center" },
+  container: { 
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: '#F4EAE1', 
+  },
+  title: { 
+    textAlign: 'center',
+    paddingBottom: 10,
+    fontSize: 30
+  },
+  message: { textAlign: "center",
+    paddingBottom: 10
+  },
+  camera: { width: '90%',
+    height: '70%',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  preview: { 
+    width: '90%',
+    height: '70%',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  captureButton: {
+    position: "absolute",
+    bottom: 40,
+    alignSelf: "center",
+  },
+  buttonRow: {
+    position: "absolute",
+    bottom: 40,
+    flexDirection: "row",
+    justifyContent: "center",
+    width: "100%",
+  },
+  buttonWrapper: {
+    marginHorizontal: 10,
+  },
 });

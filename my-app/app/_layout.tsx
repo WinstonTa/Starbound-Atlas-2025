@@ -27,10 +27,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="add_deal"
         options={{
-          title: 'Chat',
-          tabBarLabel: 'Chat',
+          title: 'Add Deal',
+          tabBarLabel: 'Add Deal',
         }}
       />
       <Tabs.Screen

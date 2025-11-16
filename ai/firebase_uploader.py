@@ -11,9 +11,7 @@ from firebase_admin import credentials, firestore
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-# Support both paddle_ocr and gemini_parser
-# Add paddle_ocr to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'paddle_ocr'))
+# Support both OCR and gemini_parser
 try:
     from happy_hour_gemini import HappyHourGeminiOCR
     PADDLE_OCR_AVAILABLE = True

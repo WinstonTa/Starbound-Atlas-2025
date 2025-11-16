@@ -47,3 +47,28 @@ web-build/
 web-build/
 
 expo-env.d.ts
+
+# Python
+venv/
+env/
+ENV/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+.env.local
+
+# Firebase credentials
+*service_account*.json
+serviceAccountKey.json
+happy_hour_service_account.json
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.cert

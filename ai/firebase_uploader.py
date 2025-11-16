@@ -12,14 +12,16 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 
 # Support both paddle_ocr and gemini_parser
+# Add paddle_ocr to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'paddle_ocr'))
 try:
     from happy_hour_gemini import HappyHourGeminiOCR
     PADDLE_OCR_AVAILABLE = True
 except ImportError:
     PADDLE_OCR_AVAILABLE = False
 
-# Add gemini_parser to path if needed
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'ai', 'gemini_parser'))
+# Add gemini_parser to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'gemini_parser'))
 try:
     from models import MenuParsing
     GEMINI_PARSER_AVAILABLE = True

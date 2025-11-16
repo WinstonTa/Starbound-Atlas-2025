@@ -1,36 +1,49 @@
-# Virtual environment
-venv/
-env/
-ENV/
-.venv/
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+.yarn-integrity
 
-# Environment variables
-.env
-.env.local
+# Xcode
+build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+project.xcworkspace
+xcuserdata/
 
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Firebase credentials
-*service_account*.json
-serviceAccountKey.json
-
-# SSL certificates
-*.pem
-*.key
-*.crt
-*.cert
-
-# OS files
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# IDE
-.vscode/
+# Android
+.gradle
+/build
+/captures
+.externalNativeBuild
 .idea/
-*.swp
-*.swo
+local.properties
+*.iml
+
+# React Native specific
+.expo/
+web-build/
+*.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Expo specific (if using Expo)
+.expo/
+web-build/
+
+expo-env.d.ts

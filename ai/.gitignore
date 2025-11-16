@@ -48,3 +48,6 @@ desktop.ini
 
 # Firebase credentials
 happy_hour_service_account.json
+temp_uploads/
+
+venv/

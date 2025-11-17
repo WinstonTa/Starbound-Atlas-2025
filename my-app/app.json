@@ -50,6 +50,10 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+
+    "extra": {
+      "apiBaseUrl": "http://192.168.1.20:5000"
     }
   }
 }

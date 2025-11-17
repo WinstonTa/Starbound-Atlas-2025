@@ -1,6 +1,6 @@
 """
 Flask API for Menu Image Upload and Processing
-Accepts image uploads from frontend, processes with OCR + Gemini, uploads to Firebase
+Accepts image uploads from frontend, processes with Gemini Vision, uploads to Firebase
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -45,11 +45,10 @@ def health_check():
 @app.route('/upload-menu', methods=['POST'])
 def upload_menu():
     """
-    Upload menu image, process with OCR + Gemini, and upload to Firebase
+    Upload menu image, process with Gemini Vision, and upload to Firebase
 
     Request:
         - image: Image file (multipart/form-data)
-        - method: Optional extraction method (hybrid/vision/gemini_validation)
         - collection: Optional Firestore collection name
 
     Response:
@@ -87,17 +86,8 @@ def upload_menu():
             'error': f'Invalid file type. Allowed: {", ".join(ALLOWED_EXTENSIONS)}'
         }), 400
 
-    # Get optional parameters
-    # Default to 'vision' for better reliability (hybrid can fall back if OCR fails)
-    method = request.form.get('method', 'vision')
+    # Get collection parameter
     collection = request.form.get('collection', 'final_schema')
-
-    # Validate method
-    if method not in ['hybrid', 'vision', 'gemini_validation']:
-        return jsonify({
-            'success': False,
-            'error': 'Invalid method. Use: hybrid, vision, or gemini_validation'
-        }), 400
 
     # Save file temporarily
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -109,13 +99,8 @@ def upload_menu():
         file.save(filepath)
         print(f"[OK] Saved image to: {filepath}")
 
-        # Process and upload to Firebase
-        print(f"[INFO] Processing with method: {method}")
-        doc_id = uploader.upload_menu(
-            filepath,
-            method=method,
-            collection=collection
-        )
+        # Process and upload to Firebase with Gemini Vision
+        doc_id = uploader.upload_menu(filepath, collection=collection)
 
         # Get the uploaded data
         uploaded_data = uploader.get_restaurant(doc_id, collection=collection)

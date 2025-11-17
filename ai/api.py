@@ -88,7 +88,8 @@ def upload_menu():
         }), 400
 
     # Get optional parameters
-    method = request.form.get('method', 'hybrid')
+    # Default to 'vision' for better reliability (hybrid can fall back if OCR fails)
+    method = request.form.get('method', 'vision')
     collection = request.form.get('collection', 'final_schema')
 
     # Validate method

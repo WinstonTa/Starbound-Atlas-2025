@@ -270,14 +270,24 @@ Important:
     def extract_hybrid(self, image_path, min_confidence=0.3):
         """
         Hybrid approach: Use both OCR+Gemini and pure Vision, then merge
-        This gives the best accuracy
+        This gives the best accuracy. Falls back to vision-only if OCR fails.
         """
 
         print("Using hybrid approach (OCR + Vision)...")
         print("=" * 70)
 
-        # Method 1: OCR + Gemini validation
-        ocr_result = self.extract_with_gemini_validation(image_path, min_confidence)
+        # Method 1: OCR + Gemini validation (with fallback)
+        try:
+            ocr_result = self.extract_with_gemini_validation(image_path, min_confidence)
+        except Exception as e:
+            print(f"[WARNING] OCR failed: {e}")
+            print("[INFO] Falling back to vision-only method...")
+            ocr_result = {
+                "restaurant_name": None,
+                "deals": None,
+                "time_frame": None,
+                "special_conditions": None
+            }
 
         print()
 

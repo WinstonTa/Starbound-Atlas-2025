@@ -1,6 +1,6 @@
 # Menu Parser API
 
-Flask API for uploading menu images from frontend (camera), processing with OCR + Gemini AI, and uploading to Firebase.
+Flask API for uploading menu images from frontend (camera), processing with Gemini Vision AI, and uploading to Firebase.
 
 ## Quick Start
 
@@ -8,8 +8,7 @@ Flask API for uploading menu images from frontend (camera), processing with OCR 
 
 ```bash
 cd ai
-pip install -r ocr_requirements.txt
-pip install firebase-admin
+pip install -r requirements.txt
 ```
 
 ### 2. Set Up Environment Variables
@@ -57,7 +56,6 @@ Content-Type: multipart/form-data
 
 **Parameters:**
 - `image` (file, required) - Menu image file
-- `method` (string, optional) - Extraction method: `hybrid` (default), `vision`, or `gemini_validation`
 - `collection` (string, optional) - Firestore collection name (default: `final_schema`)
 
 **Response:**
@@ -148,7 +146,6 @@ const uploadImage = async (imageUri) => {
     type: 'image/jpeg',
     name: 'menu.jpg',
   });
-  formData.append('method', 'hybrid');
   formData.append('collection', 'final_schema');
 
   try {

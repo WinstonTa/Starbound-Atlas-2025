@@ -1,30 +1,27 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { View, Text, Button, StyleSheet, Image } from "react-native";
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
+import { View, Text, Button, Image, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { uploadMenuImage, testUpload, type MenuParsing } from "../src/api";
 
 export default function AddDealScreen() {
   const [permission, requestPermission] = useCameraPermissions();
+  const [uploading, setUploading] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [result, setResult] = useState<MenuParsing | null>(null);
   const cameraRef = useRef<CameraView>(null);
 
-  // wait for permissions to pop up
-  if (!permission) {
-    return <View />;
-  }
+  if (!permission) return <View />;
 
-  // ask user for camera permission
   if (!permission.granted) {
     return (
       <View style={styles.container}>
-        <Text style={styles.message}>
-          We need your permission to show the camera
-        </Text>
+        <Text style={styles.message}>We need your permission to show the camera</Text>
         <Button onPress={requestPermission} title="Grant permission" />
       </View>
     );
   }
 
-  const takePhoto = async() => {
+  const takePhoto = async () => {
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync();
       setPhotoUri(photo.uri);
@@ -32,24 +29,50 @@ export default function AddDealScreen() {
     }
   };
 
+  const onConfirm = async () => {
+    if (!photoUri) return;
+    try {
+      setUploading(true);
+      const parsed = await testUpload(photoUri);
+      setResult(parsed);
+      Alert.alert("Parsed", `Found ${parsed.deals?.length ?? 0} deal(s)`);
+    } catch (e: any) {
+      Alert.alert("Upload failed", e.message ?? "Unknown error");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (uploading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+        <Text style={styles.loadingText}>Uploading deal data...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {photoUri ? (
         <>
-          {/* displays image preview, retake and confirm image options*/}
           <Image source={{ uri: photoUri }} style={styles.preview} />
-          <View style={styles.buttonRow}>
-            <View style={styles.buttonWrapper}>
+          <View style={styles.row}>
+            <View style={styles.buttonWrap}>
               <Button title="Retake" onPress={() => setPhotoUri(null)} />
             </View>
-            <View style={styles.buttonWrapper}>
-              <Button title="Confirm" onPress={() => {}} />
+            <View style={styles.buttonWrap}>
+              <Button title="Confirm" onPress={onConfirm} />
             </View>
           </View>
+          {result ? (
+            <View style={styles.resultBox}>
+              <Text style={styles.resultText}>{JSON.stringify(result, null, 2)}</Text>
+            </View>
+          ) : null}
         </>
       ) : (
         <>
-          {/* shows camera and take photo button*/}
           <CameraView ref={cameraRef} style={styles.camera} facing="back" />
           <View style={styles.captureButton}>
             <Button title="Take Photo" onPress={takePhoto} />
@@ -58,47 +81,68 @@ export default function AddDealScreen() {
       )}
     </View>
   );
-
 }
 
 const styles = StyleSheet.create({
-  container: { 
+  container: {
     flex: 1,
     justifyContent: "center",
-    backgroundColor: '#F4EAE1', 
+    backgroundColor: "#F4EAE1",
   },
-  title: { 
-    textAlign: 'center',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F4EAE1",
+  },
+  loadingText: {
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: "500",
+  },
+  message: {
+    textAlign: "center",
     paddingBottom: 10,
-    fontSize: 30
   },
-  message: { textAlign: "center",
-    paddingBottom: 10
+  camera: {
+    width: "90%",
+    height: "70%",
+    justifyContent: "center",
+    alignSelf: "center",
   },
-  camera: { width: '90%',
-    height: '70%',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
-  preview: { 
-    width: '90%',
-    height: '70%',
-    justifyContent: 'center',
-    alignSelf: 'center',
+  preview: {
+    width: "90%",
+    height: "70%",
+    justifyContent: "center",
+    alignSelf: "center",
   },
   captureButton: {
     position: "absolute",
     bottom: 40,
     alignSelf: "center",
   },
-  buttonRow: {
+  row: {
     position: "absolute",
     bottom: 40,
     flexDirection: "row",
     justifyContent: "center",
     width: "100%",
   },
-  buttonWrapper: {
+  buttonWrap: {
     marginHorizontal: 10,
   },
+  resultBox: {
+    position: "absolute",
+    top: 60,
+    left: 16,
+    right: 16,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    padding: 12,
+    borderRadius: 8,
+  },
+  resultText: {
+    color: "white",
+    fontFamily: "Courier",
+  },
 });
+

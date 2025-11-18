@@ -102,58 +102,105 @@ function convertToFrontendFormat(venue, deals) {
   };
 }
 
-exports.getAllVenuesWithDeals = functions.https.onCall(async (data, context) => {
+// updated funciton to pull from 'final_schema' 
+exports.getAllVenuesWithDeals = functions.https.onCall(async (_data, _ctx) => {
   try {
-    // Step 1: Get all venues
-    const venuesSnapshot = await db.collection('venues').get();
-    
-    if (venuesSnapshot.empty) {
-      return {
-        success: true,
-        venues: [],
-      };
+    const snap = await db.collection('final_schema').get();
+    functions.logger.info('[getAllVenuesWithDeals] Using final_schema', { count: snap.size });
+
+
+    if (snap.empty) {
+      return { success: true, venues: [] };
     }
 
-    const venues = venuesSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const venues = snap.docs.map(doc => {
+      const v = doc.data() || {};
 
-    // Step 2: Get all active deals (grouped by venueId)
-    const dealsSnapshot = await db.collection('deals')
-      .where('active', '==', true)
-      .get();
+      const deals = Array.isArray(v.deals)
+        ? v.deals.map(d => ({
+            name: d?.name ?? '',
+            price: d?.price ?? '',
+            description: d?.description ?? null,
+            start_time: d?.start_time ?? '',
+            end_time: d?.end_time ?? '',
+            days: Array.isArray(d?.days) ? d.days : [],
+            special_conditions: Array.isArray(d?.special_conditions)
+              ? d.special_conditions.join('; ')
+              : (d?.special_conditions ?? null),
+          }))
+        : [];
 
-    // Group deals by venueId
-    const dealsByVenueId = {};
-    dealsSnapshot.docs.forEach(doc => {
-      const deal = { id: doc.id, ...doc.data() };
-      const venueId = deal.venueId;
-      if (!dealsByVenueId[venueId]) {
-        dealsByVenueId[venueId] = [];
-      }
-      dealsByVenueId[venueId].push(deal);
+      return {
+        venue_id: v.venue_id ?? doc.id,
+        venue_name: v.venue_name ?? '',
+        latitude: v.latitude ?? null,
+        longitude: v.longitude ?? null,
+        address: v.address ?? '',
+        deals,
+      };
     });
 
-    // Step 3: Convert each venue to frontend format
-    const frontendVenues = venues.map(venue => {
-      const venueDeals = dealsByVenueId[venue.id] || [];
-      return convertToFrontendFormat(venue, venueDeals);
-    });
-
-    return {
-      success: true,
-      venues: frontendVenues,
-    };
-
+    return { success: true, venues };
   } catch (error) {
     console.error('Error in getAllVenuesWithDeals:', error);
-    
-    return {
-      success: false,
-      venues: [],
-      error: error.message,
-    };
+    return { success: false, venues: [], error: error.message };
   }
 });
 
+
+// legacy code for venue + deals grouping
+// exports.getAllVenuesWithDeals = functions.https.onCall(async (data, context) => {
+//   try {
+//     // Step 1: Get all venues
+//     const venuesSnapshot = await db.collection('venues').get();
+//     
+//     if (venuesSnapshot.empty) {
+//       return {
+//         success: true,
+//         venues: [],
+//       };
+//     }
+//
+//     const venues = venuesSnapshot.docs.map(doc => ({
+//       id: doc.id,
+//       ...doc.data(),
+//     }));
+//
+//     // Step 2: Get all active deals (grouped by venueId)
+//     const dealsSnapshot = await db.collection('deals')
+//       .where('active', '==', true)
+//       .get();
+//
+//     // Group deals by venueId
+//     const dealsByVenueId = {};
+//     dealsSnapshot.docs.forEach(doc => {
+//       const deal = { id: doc.id, ...doc.data() };
+//       const venueId = deal.venueId;
+//       if (!dealsByVenueId[venueId]) {
+//         dealsByVenueId[venueId] = [];
+//       }
+//       dealsByVenueId[venueId].push(deal);
+//     });
+//
+//     // Step 3: Convert each venue to frontend format
+//     const frontendVenues = venues.map(venue => {
+//       const venueDeals = dealsByVenueId[venue.id] || [];
+//       return convertToFrontendFormat(venue, venueDeals);
+//     });
+//
+//     return {
+//       success: true,
+//       venues: frontendVenues,
+//     };
+//
+//   } catch (error) {
+//     console.error('Error in getAllVenuesWithDeals:', error);
+//     
+//     return {
+//       success: false,
+//       venues: [],
+//       error: error.message,
+//     };
+//   }
+// });
+//

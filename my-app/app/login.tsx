@@ -27,7 +27,7 @@ GoogleSignin.configure({
 const logoPlaceholder = { uri: 'https://placehold.co/120x120/4f46e5/ffffff?text=LOGO' };
 
 // --- CUSTOM HOOK for Google Sign-In ---
-const useGoogleSignIn = () => {
+const useGoogleSignIn = (onSuccess: () => void) => {
   const [loading, setLoading] = useState(false);
 
   const signIn = useCallback(async () => {
@@ -42,6 +42,7 @@ const useGoogleSignIn = () => {
       // 3. Success: In a real app, send userInfo.idToken to your backend for verification
       console.log('Google Sign-In Success:', userInfo.user.email); 
       Alert.alert('Success', `Signed in as: ${userInfo.user.email}`);
+      onSuccess(); // Trigger the navigation change
 
     } catch (error) {
       const gError = error as GoogleSigninError;
@@ -59,27 +60,32 @@ const useGoogleSignIn = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onSuccess]);
 
   return { isSigningIn: loading, signIn };
 }
 
+// --- COMPONENT PROPS ---
+interface LoginScreenProps {
+  onLoginSuccess: () => void;
+}
+
 // --- REACT NATIVE COMPONENT ---
-export default function LoginScreen() {
+export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { isSigningIn: isGoogleSigningIn, signIn: signInWithGoogle } = useGoogleSignIn();
+  const { isSigningIn: isGoogleSigningIn, signIn: signInWithGoogle } = useGoogleSignIn(onLoginSuccess);
   const [isStandardSigningIn, setStandardSigningIn] = useState(false);
   
   const handleLogin = () => {
     setStandardSigningIn(true);
     console.log('Standard Login Attempt:', { email, password });
 
-    // Simulate Network/API delay
+    // Simulate a successful API call
     setTimeout(() => {
       setStandardSigningIn(false);
-      // In a real app, validate credentials and navigate
-      console.log('Standard Login attempt processed!');
+      console.log('Standard Login successful!');
+      onLoginSuccess(); // Trigger the navigation change
     }, 2000);
   };
 

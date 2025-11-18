@@ -16,7 +16,7 @@ export default function AddDealScreen() {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="Grant permission" />
+        <Button style={styles.buttonWrap} onPress={requestPermission} title="Grant permission" />
       </View>
     );
   }

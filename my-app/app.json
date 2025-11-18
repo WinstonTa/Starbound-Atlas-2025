@@ -11,19 +11,16 @@
 
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.happymapper.app"
+      "bundleIdentifier": "com.happymapper.app",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
 
     "android": {
       "package": "com.happymapper.app",
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "minSdkVersion": 23,
+      "googleServicesFile": "./google-services.json"
     },
 
     "web": {
@@ -40,9 +37,14 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "dark": { "backgroundColor": "#000000" }
+        }
+      ],
+      [
+        "@react-native-firebase/app",
+        {
+          "androidGoogleServicesFile": "./google-services.json",
+          "iosGoogleServicesFile": "./GoogleService-Info.plist"
         }
       ]
     ],
@@ -57,3 +59,4 @@
     }
   }
 }
+

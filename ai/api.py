@@ -85,7 +85,7 @@ def upload_menu():
         ), 400
 
     # Get collection parameter
-    collection = request.form.get('collection', 'final_schema')
+    collection = request.form.get("collection", "final_schema")
 
     # Save file temporarily
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)

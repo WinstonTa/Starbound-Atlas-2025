@@ -20,11 +20,11 @@ export type FrontendVenueWithDeals = {
   venue_name: string;
   latitude: number;
   longitude: number;
-  address: string;
+  address: string | Record<string, unknown> | null; // can be object or string
   deals: FrontendDeal[];
 };
 
-// ✅ initialize modular API with region
+// initialize modular API with region
 const app = getApp();
 const fns = getFunctions(app, 'us-central1'); // adjust if backend uses a different region
 

@@ -34,47 +34,38 @@
 // });
 
 
-// app/index.tsx
-import React, { useEffect, useState } from 'react';
+// app/index.tsx TESTING FIREBASE CONNECTION, TESTING ZONE DANGER YAY
+import React, { useEffect, useState, memo } from 'react';
 import { View, Text, FlatList, ActivityIndicator } from 'react-native';
-import { getAllVenuesWithDeals } from '../src/venues';
+import { getAllVenuesWithDeals, type FrontendVenueWithDeals, type FrontendDeal } from '../src/venues';
 
-type Venue = {
-  venue_id: string;
-  venue_name: any;
-  latitude?: number;
-  longitude?: number;
-  address?: any;           // can be string or object
-  deals?: any[];
-};
-
-type Deal = {
-  name: string;
-  price: string | number;
-  description?: string | null;
-  start_time?: string;
-  end_time?: string;
-  days?: string[];
-  special_conditions?: string | null;
-};
-
-function formatAddress(addr: any): string {
-  if (addr == null) return '';
+function formatAddress(addr: FrontendVenueWithDeals['address']): string {
+  if (!addr) return '';
   if (typeof addr === 'string') return addr;
-  // common shapes
-  if (typeof addr === 'object') {
-    if (addr.formatted) return String(addr.formatted);
-    const parts = [addr.street, addr.city, addr.state, addr.postalCode]
-      .filter(Boolean)
-      .map(String);
-    if (parts.length) return parts.join(', ');
-    return JSON.stringify(addr); // last resort
-  }
-  return String(addr);
+  const parts = [
+    // adapt to your object shape if you have one
+    addr['city'], addr['state'], addr['street'], addr['zip'],
+  ].filter(Boolean).map(String);
+  return parts.length ? parts.join(', ') : JSON.stringify(addr);
 }
 
+const DealItem = memo(({ d }: { d: FrontendDeal }) => {
+  const time = d.start_time && d.end_time ? `${d.start_time}–${d.end_time}` : '';
+  const days = Array.isArray(d.days) && d.days.length ? d.days.join(', ') : '';
+  return (
+    <View style={{ paddingVertical: 6 }}>
+      <Text style={{ fontWeight: '600' }}>
+        {String(d.name ?? 'Unnamed deal')}{d.price != null ? ` · ${String(d.price)}` : ''}
+      </Text>
+      {!!(time || days) && <Text style={{ opacity: 0.8 }}>{time}{time && days ? ' · ' : ''}{days}</Text>}
+      {!!d.description && <Text style={{ opacity: 0.9 }}>{String(d.description)}</Text>}
+      {!!d.special_conditions && <Text style={{ opacity: 0.8 }}>Conditions: {String(d.special_conditions)}</Text>}
+    </View>
+  );
+});
+
 export default function Home() {
-  const [venues, setVenues] = useState<Venue[]>([]);
+  const [venues, setVenues] = useState<FrontendVenueWithDeals[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -82,7 +73,7 @@ export default function Home() {
     (async () => {
       try {
         const v = await getAllVenuesWithDeals();
-        setVenues(v as Venue[]);
+        setVenues(v);
       } catch (e: any) {
         setErr(e?.message ?? String(e));
       } finally {
@@ -98,23 +89,30 @@ export default function Home() {
     <FlatList
       contentContainerStyle={{ padding: 16 }}
       data={venues}
-      keyExtractor={(x) => String(x.venue_id ?? Math.random())}
+      keyExtractor={(x, i) => String(x.venue_id ?? i)}
       renderItem={({ item }) => {
         const addressText = formatAddress(item.address);
-        const dealsCount = Array.isArray(item.deals) ? item.deals.length : 0;
+        const deals = Array.isArray(item.deals) ? item.deals : [];
         return (
-          <View style={{ padding: 12, borderRadius: 8, backgroundColor: '#f2f2f2', marginBottom: 10 }}>
-            <Text style={{ fontWeight: 'bold' }}>{String(item.venue_name ?? 'Unnamed venue')}</Text>
-            {!!addressText && <Text>{addressText}</Text>}
-            <Text>{dealsCount} deals</Text>
+          <View style={{ padding: 12, borderRadius: 8, backgroundColor: '#f2f2f2', marginBottom: 12 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16 }}>
+              {String(item.venue_name ?? 'Unnamed venue')}
+            </Text>
+            {!!addressText && <Text style={{ marginBottom: 6 }}>{addressText}</Text>}
+
+            {deals.length === 0 ? (
+              <Text style={{ opacity: 0.6 }}>No deals</Text>
+            ) : (
+              <View style={{ paddingTop: 4 }}>
+                {deals.map((d, idx) => (
+                  <DealItem key={`${item.venue_id}-deal-${idx}`} d={d} />
+                ))}
+              </View>
+            )}
           </View>
         );
       }}
     />
   );
 }
-
-
-
-
 

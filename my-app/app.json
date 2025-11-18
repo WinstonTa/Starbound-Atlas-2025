@@ -12,7 +12,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.happymapper.app",
-      "googleServicesFile": "./ios/GoogleService-Info.plist"
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
 
     "android": {
@@ -20,7 +20,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "minSdkVersion": 23,
-      "googleServicesFile": "./android/google-services.json"
+      "googleServicesFile": "./google-services.json"
     },
 
     "web": {
@@ -43,8 +43,8 @@
       [
         "@react-native-firebase/app",
         {
-          "androidGoogleServicesFile": "./android/google-services.json",
-          "iosGoogleServicesFile": "./ios/GoogleService-Info.plist"
+          "androidGoogleServicesFile": "./google-services.json",
+          "iosGoogleServicesFile": "./GoogleService-Info.plist"
         }
       ]
     ],

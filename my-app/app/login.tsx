@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes, GoogleSigninError } from '@react-native-google-signin/google-signin';
 
 // --- CONFIGURATION ---
 // IMPORTANT: Replace this with your actual Web Client ID from Google Cloud Console
@@ -44,7 +44,7 @@ const useGoogleSignIn = () => {
       Alert.alert('Success', `Signed in as: ${userInfo.user.email}`);
 
     } catch (error) {
-      const gError = error as { code?: string }; // Type assertion for safety
+      const gError = error as GoogleSigninError;
       if (gError.code === statusCodes.SIGN_IN_CANCELLED) {
         console.log('User cancelled the login flow.');
       } else if (gError.code === statusCodes.IN_PROGRESS) {
@@ -159,8 +159,11 @@ export default function LoginScreen() {
             onPress={signInWithGoogle}
             disabled={isLoading}
           >
-            <Icon name="logo-google" size={24} color="#4285F4" style={styles.googleIcon} />
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
+            {isGoogleSigningIn ? (
+              <ActivityIndicator size="small" color="#4f46e5" />
+            ) : (
+              <><Icon name="logo-google" size={24} color="#4285F4" style={styles.googleIcon} /><Text style={styles.googleButtonText}>Continue with Google</Text></>
+            )}
           </TouchableOpacity>
 
           {/* Sign Up Link */}
@@ -251,7 +254,6 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: '#4f46e5',
-    marginBottom: 20,
   },
   buttonText: {
     color: '#fff',
@@ -262,7 +264,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    marginVertical: 10,
+    marginVertical: 20,
   },
   separatorLine: {
     flex: 1,
@@ -281,7 +283,6 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     borderWidth: 1,
     flexDirection: 'row',
-    marginBottom: 30,
   },
   googleIcon: {
     marginRight: 10,

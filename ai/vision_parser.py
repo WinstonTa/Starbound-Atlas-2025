@@ -52,8 +52,10 @@ class VisionMenuParser:
 
         try:
             # Load image
+            print(f"Loading image: {image_path}")
             img = PIL.Image.open(image_path)
             img.load()  # Load into memory
+            print(f"[OK] Image loaded - Size: {img.size}, Mode: {img.mode}, Format: {img.format}")
 
             # Create prompt
             prompt = """Analyze this restaurant menu/happy hour deal image.
@@ -90,21 +92,34 @@ Important:
             response = self.model.generate_content([prompt, img])
             response_text = response.text.strip()
 
+            print(f"[DEBUG] Raw Gemini response length: {len(response_text)} characters")
+            print(f"[DEBUG] First 200 chars: {response_text[:200]}")
+            print(f"[DEBUG] Full response:\n{response_text}\n")
+
             # Clean response (remove markdown if present)
             if response_text.startswith('```'):
+                print("[DEBUG] Response has markdown formatting, cleaning...")
                 json_text = response_text.split('```')[1]
                 if json_text.startswith('json'):
                     json_text = json_text[4:]
                 response_text = json_text.strip()
+                print(f"[DEBUG] Cleaned response:\n{response_text}\n")
 
             # Parse JSON
+            print("[DEBUG] Attempting to parse JSON...")
             data = json.loads(response_text)
+            print(f"[DEBUG] JSON parsed successfully!")
+            print(f"[DEBUG] Parsed data type: {type(data)}")
+            print(f"[DEBUG] Parsed data keys: {data.keys() if isinstance(data, dict) else 'Not a dict'}")
 
             print(f"[OK] Extracted data:")
             print(f"  Restaurant: {data.get('restaurant_name')}")
-            print(f"  Deals: {len(data.get('deals', []))} items")
-            print(f"  Time Frames: {len(data.get('time_frame', []))} slots")
-            print(f"  Conditions: {len(data.get('special_conditions', []))} items")
+            deals = data.get('deals', [])
+            print(f"  Deals: {len(deals) if deals else 0} items")
+            time_frame = data.get('time_frame', [])
+            print(f"  Time Frames: {len(time_frame) if time_frame else 0} slots")
+            conditions = data.get('special_conditions', [])
+            print(f"  Conditions: {len(conditions) if conditions else 0} items")
 
             return data
 

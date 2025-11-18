@@ -2,6 +2,7 @@
 Firebase Uploader for Menu Extraction
 Extracts menu information using Gemini Vision and uploads to Firestore
 """
+
 import os
 from dotenv import load_dotenv
 import firebase_admin
@@ -21,34 +22,26 @@ class FirebaseUploader:
             service_account_path: Path to Firebase service account JSON file
                                  If None, reads from FIREBASE_SERVICE_ACCOUNT env variable
         """
-        # Load environment variables
         load_dotenv()
 
-        # Get service account path
         if service_account_path is None:
-            service_account_path = os.getenv('FIREBASE_SERVICE_ACCOUNT')
+            service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT")
 
-        # Validate service account file
         if not service_account_path:
             raise ValueError(
                 "Firebase service account path not provided. "
-                "Set FIREBASE_SERVICE_ACCOUNT in .env or pass service_account_path parameter"
+                "Set FIREBASE_SERVICE_ACCOUNT in .env or pass service_account_path."
             )
-
         if not os.path.exists(service_account_path):
             raise ValueError(f"Service account file not found: {service_account_path}")
 
-        # Initialize Firebase Admin SDK
         cred = credentials.Certificate(service_account_path)
-
-        # Only initialize if not already initialized
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred)
             print("[OK] Firebase initialized")
         else:
             print("[OK] Using existing Firebase connection")
 
-        # Create Firestore client
         self.db = firestore.client()
         print("[OK] Connected to Firestore")
 
@@ -57,7 +50,7 @@ class FirebaseUploader:
 
     def upload_menu(self, image_path, collection='final_schema'):
         """
-        Extract menu data from image and upload to Firestore
+        Extract menu data from image via Gemini and upload to Firestore.
 
         Args:
             image_path: Path to menu image
@@ -66,7 +59,7 @@ class FirebaseUploader:
         Returns:
             str: Document ID of uploaded data
         """
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"Processing: {image_path}")
         print(f"{'='*70}\n")
 
@@ -83,14 +76,14 @@ class FirebaseUploader:
         # Display extracted info
         print(f"\n{'='*70}")
         print("Uploading to Firestore...")
-        print(f"{'='*70}\n")
+        print(f"{'=' * 70}\n")
 
         # Upload to Firestore
         doc_ref = self.db.collection(collection).add(data)
         doc_id = doc_ref[1].id
 
         print(f"[OK] Uploaded to Firestore: {collection}/{doc_id}")
-        print(f"{'='*70}\n")
+        print(f"{'=' * 70}\n")
 
         return doc_id
 
@@ -125,7 +118,7 @@ class FirebaseUploader:
         """
         doc = self.db.collection(collection).document(doc_id).get()
         if doc.exists:
-            return {'id': doc.id, **doc.to_dict()}
+            return {"id": doc.id, **doc.to_dict()}
         return None
 
     def get_all_restaurants(self, collection='final_schema', limit=None):
@@ -140,12 +133,10 @@ class FirebaseUploader:
             list: List of restaurant data dictionaries
         """
         query = self.db.collection(collection)
-
         if limit:
             query = query.limit(limit)
-
         docs = query.stream()
-        return [{'id': doc.id, **doc.to_dict()} for doc in docs]
+        return [{"id": doc.id, **doc.to_dict()} for doc in docs]
 
     def batch_upload(self, image_paths, collection='final_schema'):
         """
@@ -159,7 +150,6 @@ class FirebaseUploader:
             list: List of results with document IDs or errors
         """
         results = []
-
         for i, image_path in enumerate(image_paths, 1):
             print(f"\n[{i}/{len(image_paths)}] Processing {image_path}...")
             try:
@@ -171,17 +161,14 @@ class FirebaseUploader:
                 })
             except Exception as e:
                 print(f"[ERROR] Failed to process {image_path}: {e}")
-                results.append({
-                    'image': image_path,
-                    'error': str(e),
-                    'status': 'failed'
-                })
-
+                results.append(
+                    {"image": image_path, "error": str(e), "status": "failed"}
+                )
         return results
 
 
 def main():
-    """Example usage"""
+    """Example CLI usage"""
     import argparse
 
     parser = argparse.ArgumentParser(description='Extract menu data and upload to Firestore')
@@ -191,15 +178,14 @@ def main():
 
     args = parser.parse_args()
 
-    # Initialize uploader
     uploader = FirebaseUploader()
 
     # Upload menu
     doc_id = uploader.upload_menu(args.image, collection=args.collection)
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"SUCCESS! Document ID: {doc_id}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
 
 if __name__ == "__main__":

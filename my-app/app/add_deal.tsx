@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRef, useState } from "react";
 import { View, Text, Button, Image, StyleSheet, ActivityIndicator, Alert } from "react-native";
-import { uploadMenuImage, testUpload, type MenuParsing } from "../src/api";
+import { testUpload, type MenuParsing } from "../src/api";
 
 export default function AddDealScreen() {
   const [permission, requestPermission] = useCameraPermissions();

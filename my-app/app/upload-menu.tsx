@@ -117,137 +117,230 @@ export default function UploadMenuScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Upload Menu</Text>
-        <Text style={styles.subtitle}>
-          Take a photo or select an image, then enter venue information
-        </Text>
-
-        {/* Camera & Gallery Buttons */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.button, { backgroundColor: '#34C759' }]} onPress={takePhoto}>
-            <Text style={styles.buttonText}>📸 Take Photo</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.button, { backgroundColor: '#007AFF' }]} onPress={pickImage}>
-            <Text style={styles.buttonText}>🖼 From Gallery</Text>
-          </TouchableOpacity>
+    <View style={styles.wrapper}>
+      <View style={styles.headerBar}>
+        <Text style={styles.headerText}>HappyMapper</Text>
+      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Add Deal</Text>
+          <Text style={styles.subtitle}>
+            Capture the menu to add deals
+          </Text>
         </View>
 
-        {/* Image Preview */}
-        {selectedImage && (
+      {!selectedImage ? (
+        <View style={styles.uploadSection}>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
+              <Text style={styles.cameraIcon}>📷</Text>
+              <Text style={styles.buttonText}>Camera</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
+              <Text style={styles.galleryIcon}>🖼️</Text>
+              <Text style={styles.buttonText}>Gallery</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.previewSection}>
           <View style={styles.imagePreview}>
             <Image source={{ uri: selectedImage }} style={styles.image} />
+            <TouchableOpacity
+              style={styles.changeButton}
+              onPress={() => setSelectedImage(null)}
+            >
+              <Text style={styles.changeButtonText}>Change Photo</Text>
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Venue Form */}
-        {selectedImage && (
           <View style={styles.formContainer}>
             <VenueForm onSubmit={handleVenueSubmit} />
           </View>
-        )}
+        </View>
+      )}
 
-        {/* Upload Status */}
-        {uploading && (
-          <View style={styles.uploadingContainer}>
-            <Text style={styles.uploadingText}>Uploading and processing...</Text>
+      {uploading && (
+        <View style={styles.uploadingContainer}>
+          <View style={styles.spinner}>
+            <Text style={styles.spinnerText}>⏳</Text>
           </View>
-        )}
+          <Text style={styles.uploadingText}>Processing your menu...</Text>
+        </View>
+      )}
 
-        {uploadedDocId && (
-          <View style={styles.successContainer}>
-            <Text style={styles.successText}>✓ Upload successful!</Text>
-            <Text style={styles.docIdText}>Document ID: {uploadedDocId}</Text>
-          </View>
-        )}
-      </View>
-    </ScrollView>
+      {uploadedDocId && (
+        <View style={styles.successContainer}>
+          <Text style={styles.successIcon}>✓</Text>
+          <Text style={styles.successText}>Deal Added Successfully!</Text>
+          <Text style={styles.docIdText}>ID: {uploadedDocId}</Text>
+        </View>
+      )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    backgroundColor: '#F5EBE0',
+  },
+  headerBar: {
+    backgroundColor: '#F5EBE0',
+    paddingTop: 50,
+    paddingBottom: 15,
+    alignItems: 'center',
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: '#E8886B',
+    letterSpacing: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5EBE0',
   },
-  content: {
+  scrollContent: {
+    flexGrow: 1,
     padding: 20,
+    justifyContent: 'center',
+  },
+  header: {
+    marginBottom: 30,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#333',
+    marginBottom: 10,
+    color: '#E8886B',
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
+    fontSize: 17,
+    color: '#A67B5B',
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  uploadSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    elevation: 1,
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+    width: '100%',
+    gap: 15,
   },
-  button: {
+  cameraButton: {
     flex: 1,
-    marginHorizontal: 5,
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: '#E8886B',
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    borderRadius: 16,
     alignItems: 'center',
+  },
+  galleryButton: {
+    flex: 1,
+    backgroundColor: '#D4A08B',
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  cameraIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  galleryIcon: {
+    fontSize: 32,
+    marginBottom: 8,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
+  previewSection: {
+    gap: 20,
+  },
   imagePreview: {
-    marginBottom: 20,
-    borderRadius: 10,
+    borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
   },
   image: {
     width: '100%',
-    height: 300,
-    resizeMode: 'contain',
+    height: 350,
+    resizeMode: 'cover',
+  },
+  changeButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  changeButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   formContainer: {
     marginBottom: 20,
   },
   uploadingContainer: {
-    padding: 20,
-    backgroundColor: '#fff3cd',
-    borderRadius: 8,
-    marginTop: 10,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 16,
+    padding: 30,
+    alignItems: 'center',
+    elevation: 2,
+    marginTop: 20,
+  },
+  spinner: {
+    marginBottom: 15,
+  },
+  spinnerText: {
+    fontSize: 40,
   },
   uploadingText: {
-    color: '#856404',
+    color: '#F57C00',
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
   },
   successContainer: {
-    padding: 20,
-    backgroundColor: '#d4edda',
-    borderRadius: 8,
-    marginTop: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    elevation: 1,
+    marginTop: 20,
+    borderWidth: 2,
+    borderColor: '#E8886B',
+  },
+  successIcon: {
+    fontSize: 60,
+    color: '#E8886B',
+    marginBottom: 10,
   },
   successText: {
-    color: '#155724',
-    fontSize: 18,
+    color: '#E8886B',
+    fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
   },
   docIdText: {
-    color: '#155724',
+    color: '#A67B5B',
     fontSize: 14,
     textAlign: 'center',
   },

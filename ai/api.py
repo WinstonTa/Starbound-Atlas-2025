@@ -94,7 +94,7 @@ def upload_menu():
         ), 400
 
     # Get collection parameter
-    collection = request.form.get('collection', 'final_schema')
+    collection = request.form.get("collection", "final_schema")
 
     # Get venue information from form data
     venue_name = request.form.get('venue_name')

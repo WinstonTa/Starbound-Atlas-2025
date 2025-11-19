@@ -1,30 +1,66 @@
+import { memo } from 'react';
 import { View, Text, Image, StyleSheet, useWindowDimensions } from 'react-native';
+import type { FrontendVenueWithDeals, FrontendDeal } from '../src/venues';
 
-export default function ListBox({ venue_name, address, deal }) {
+type Props = { venue: FrontendVenueWithDeals };
+
+function formatAddr(addr: FrontendVenueWithDeals['address']): string {
+  if (!addr) return '';
+  if (typeof addr === 'string') return addr;
+  const parts = [addr['street'], addr['city'], addr['state'], addr['zip']]
+    .filter(Boolean)
+    .map(String);
+  return parts.join(', ');
+}
+
+function pickPrimaryDeal(deals?: FrontendDeal[]): { start?: string; end?: string; title?: string; desc?: string } {
+  if (!Array.isArray(deals) || deals.length === 0) return {};
+  const d = deals[0];
+  return {
+    start: d.start_time ? String(d.start_time) : undefined,
+    end: d.end_time ? String(d.end_time) : undefined,
+    title: d.name ? String(d.name) : undefined,
+    desc: d.description ? String(d.description) : undefined,
+  };
+}
+
+const ListBox = memo(({ venue }: Props) => {
   const { height, width } = useWindowDimensions();
-  const cardHeight = Math.round(height * 0.15); // 16% of screen height
+  const cardHeight = Math.round(height * 0.15);
 
-  const tf = deal.time_frame?.[0];
-  const d0 = deal.deals?.[0];
+  const addr = formatAddr(venue.address);
+  const { start, end, title, desc } = pickPrimaryDeal(venue.deals);
 
   return (
     <View style={[styles.card, { height: cardHeight, width: width - 24 }]}>
       <Image source={{ uri: 'https://picsum.photos/80' }} style={styles.thumb} />
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={1}>{venue_name}</Text>
-        <Text style={styles.addr} numberOfLines={1}>
-          {address.street}, {address.city}, {address.state} {address.zip}
+        <Text style={styles.title} numberOfLines={1}>
+          {String(venue.venue_name ?? 'Unnamed venue')}
         </Text>
-        <Text style={styles.time} numberOfLines={1}>
-          {tf?.start_time} – {tf?.end_time}
-        </Text>
+
+        {!!addr && (
+          <Text style={styles.addr} numberOfLines={1}>
+            {addr}
+          </Text>
+        )}
+
+        {!!(start && end) && (
+          <Text style={styles.time} numberOfLines={1}>
+            {start} - {end}
+          </Text>
+        )}
+
         <Text style={styles.desc} numberOfLines={2} ellipsizeMode="tail">
-          {d0?.name}{d0?.description ? ` — ${d0.description}` : ''}
+          {title ?? 'No deals'}
+          {desc ? ` - ${desc}` : ''}
         </Text>
       </View>
     </View>
   );
-}
+});
+
+export default ListBox;
 
 const styles = StyleSheet.create({
   card: {
@@ -39,11 +75,11 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     overflow: 'hidden',
   },
-  thumb: { width: 100, height: 100, borderRadius: 8, marginRight: 10 }, // image
-  content: { flex: 1, justifyContent: 'center' }, // card content
-  title: { fontSize: 16, fontWeight: '700' }, // title
-  addr: { fontSize: 12, color: '#666', marginTop: 2 }, // address
-  time: { fontSize: 13, fontWeight: '600', marginTop: 4 }, // deal time
-  desc: { fontSize: 13, marginTop: 4, flexShrink: 1 }, // deal description
+  thumb: { width: 100, height: 100, borderRadius: 8, marginRight: 10 },
+  content: { flex: 1, justifyContent: 'center' },
+  title: { fontSize: 16, fontWeight: '700' },
+  addr: { fontSize: 12, color: '#666', marginTop: 2 },
+  time: { fontSize: 13, fontWeight: '600', marginTop: 4 },
+  desc: { fontSize: 13, marginTop: 4, flexShrink: 1 },
 });
 

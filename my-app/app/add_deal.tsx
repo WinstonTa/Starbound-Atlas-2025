@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRef, useState } from "react";
 import { View, Text, Button, Image, StyleSheet, ActivityIndicator, Alert } from "react-native";
-import { uploadMenuImage, testUpload, type MenuParsing } from "../src/api";
+import { testUpload, type MenuParsing } from "../src/api";
 
 export default function AddDealScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -54,6 +54,7 @@ export default function AddDealScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.titleText}> Snap the Deal! </Text>
       {photoUri ? (
         <>
           <Image source={{ uri: photoUri }} style={styles.preview} />
@@ -94,6 +95,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F4EAE1",
+  },
+  titleText: {
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: "500",
+    textAlign: "center",
+    paddingBottom:10,
   },
   loadingText: {
     marginTop: 20,

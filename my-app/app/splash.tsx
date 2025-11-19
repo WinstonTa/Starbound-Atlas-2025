@@ -61,7 +61,7 @@ export default function SplashScreen() {
         ))}
       </Animated.View>
 
-      <Text style={styles.title}>happy{'\n'}hour</Text>
+      <Text style={styles.title}>happy{'\n'}mapper</Text>
       <Text style={styles.subtitle}>all day, every day</Text>
     </View>
   );

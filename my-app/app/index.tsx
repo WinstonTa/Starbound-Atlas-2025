@@ -45,7 +45,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <Text style={styles.title}>happy{'\n'}hour</Text>
+        <Text style={styles.title}>happy{'\n'}mapper</Text>
         <Text style={styles.subtitle}>all day, every day</Text>
       </Animated.View>
     </View>

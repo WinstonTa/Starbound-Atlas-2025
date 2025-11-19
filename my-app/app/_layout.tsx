@@ -30,15 +30,22 @@ export default function TabLayout() {
         options={{
           title: 'Map',
           tabBarLabel: 'Map',
-          tabBarIcon: () => <RNText style={{ fontSize: 22 }}>📍</RNText>,
+          tabBarIcon: () => 
+            <RNText style={{ 
+              fontSize: 22 
+            }}>📍</RNText>,
         }}
       />
       <Tabs.Screen
         name="list"
         options={{
-          title: 'Favorites',
-          tabBarLabel: 'Favorites',
-          tabBarIcon: () => <RNText style={{ fontSize: 22 }}>⭐</RNText>,
+          title: 'Saved Deals',
+          tabBarLabel: 'Saved Deals',
+          tabBarIcon: () => 
+            <RNText style={{ 
+              fontSize: 22,
+              marginTop: -5,
+            }}>⭐</RNText>,
         }}
       />
       <Tabs.Screen
@@ -48,24 +55,14 @@ export default function TabLayout() {
           tabBarLabel: 'Add Deal',
           tabBarIcon: ({ focused }) => (
             <RNText style={{
-              fontSize: focused ? 28 : 24,
-              backgroundColor: '#E8886B',
-              borderRadius: 25,
-              width: 50,
-              height: 50,
+              fontSize: 22,
               textAlign: 'center',
               lineHeight: 50,
-              marginTop: -20,
+              marginTop: -15,
             }}>
               📷
             </RNText>
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="add_deal"
-        options={{
-          href: null,
         }}
       />
       <Tabs.Screen
@@ -88,6 +85,12 @@ export default function TabLayout() {
       />
        <Tabs.Screen
         name="login"
+        options={{
+          href: null, // This hides the tab
+        }}
+      />
+      <Tabs.Screen
+        name="index"
         options={{
           href: null, // This hides the tab
         }}

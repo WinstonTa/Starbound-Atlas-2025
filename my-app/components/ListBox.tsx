@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { View, Text, Image, StyleSheet, useWindowDimensions } from 'react-native';
-import type { FrontendVenueWithDeals, FrontendDeal } from '../src/venues';
+import type { FrontendVenueWithDeals, FrontendDeal } from '../src/get_venues';
 
 type Props = { venue: FrontendVenueWithDeals };
 

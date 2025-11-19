@@ -1,7 +1,7 @@
 // app/list.tsx
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, View } from 'react-native';
-import { watchAllVenuesWithDeals, type FrontendVenueWithDeals } from '../src/venues';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { watchAllVenuesWithDeals, type FrontendVenueWithDeals } from '../src/get_venues';
 import { probeFinalSchema } from '../src/health';
 import ListBox from '../components/ListBox';
 
@@ -21,10 +21,10 @@ export default function ListScreen() {
     }
   }
   
-  // probe automatically on start
-  useEffect(() => {
-    probe();
-  }, []);
+  // probe automatically on start, UNCOMMENT if you need to debug connectivity with firebase
+  // useEffect(() => {
+  //   probe();
+  // }, []);
 
 
   useEffect(() => {
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 24,
-    fontWeight: '300',
+    fontWeight: '400',
     color: '#E8886B',
     letterSpacing: 1,
   },

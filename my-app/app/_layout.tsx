@@ -27,16 +27,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="add_deal"
-        options={{
-          title: 'Add Deal',
-          tabBarLabel: 'Add Deal',
-        }}
-      />
-      <Tabs.Screen
         name="upload-menu"
         options={{
-          title: 'Upload Menu',
+          title: 'Upload Deal',
           tabBarLabel: 'Upload',
         }}
       />
@@ -46,6 +39,25 @@ export default function TabLayout() {
           href: null, // This hides the tab
         }}
       />
+      <Tabs.Screen
+        name="add_deal"
+        options={{
+          href: null, // This hides the tab
+        }}
+      />
+      <Tabs.Screen
+        name="MainScreen"
+        options={{
+          href: null, // This hides the tab
+        }}
+      />
+       <Tabs.Screen
+        name="login"
+        options={{
+          href: null, // This hides the tab
+        }}
+      />
+
     </Tabs>
   );
 }

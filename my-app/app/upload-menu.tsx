@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import VenueForm from '../components/VenueForm';

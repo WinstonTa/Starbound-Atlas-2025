@@ -1,8 +1,7 @@
 {
   "expo": {
     "name": "happymapper",
-    "owner": "wtl04",
-    "slug": "team-atlas",
+    "owner": "team-atlas",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -55,7 +54,7 @@
       "apiBaseUrl": "http://192.168.1.20:5000",
       "router": {},
       "eas": {
-        "projectId": "17ae03c4-f357-4c55-812f-4a5b0520b36e"
+        "projectId": "c2fd428d-835a-4f18-a590-8389062c3fd3"
       }
     }
   }

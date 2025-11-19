@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import VenueForm from '../components/VenueForm';
 
 // For physical devices, use your computer's IP address
-const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'http://192.168.68.119:5000';
+const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'http://192.168.68.117:5000';
 
 export default function UploadMenuScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -189,10 +189,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 3,
   },
   image: {

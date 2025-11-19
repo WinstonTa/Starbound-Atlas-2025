@@ -1,9 +1,6 @@
 // src/api/venues.ts
-import { getApp } from '@react-native-firebase/app';
-import {
-  getFunctions,
-  httpsCallable,
-} from '@react-native-firebase/functions';
+// Note: This file is currently not used by the upload-menu feature
+// The upload-menu uses the Flask backend API directly
 
 export type FrontendDeal = {
   name: string;
@@ -20,22 +17,13 @@ export type FrontendVenueWithDeals = {
   venue_name: string;
   latitude: number;
   longitude: number;
-  address: string | Record<string, unknown> | null; // can be object or string
+  address: string | Record<string, unknown> | null;
   deals: FrontendDeal[];
 };
 
-// initialize modular API with region
-const app = getApp();
-const fns = getFunctions(app, 'us-central1'); // adjust if backend uses a different region
-
-export async function getAllVenuesWithDeals() {
-  const callable = httpsCallable(fns, 'getAllVenuesWithDeals');
-  const res = await callable({});
-
-  if (!res.data?.success) {
-    throw new Error(res.data?.error || 'Function returned unsuccessful');
-  }
-
-  return res.data.venues as FrontendVenueWithDeals[];
+// This function would need Firebase Functions setup to work
+// Currently using Flask backend API instead
+export async function getAllVenuesWithDeals(): Promise<FrontendVenueWithDeals[]> {
+  throw new Error('This feature requires Firebase Functions setup. Use the Flask API instead.');
 }
 

@@ -34,6 +34,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="upload-menu"
+        options={{
+          title: 'Upload Menu',
+          tabBarLabel: 'Upload',
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
           href: null, // This hides the tab

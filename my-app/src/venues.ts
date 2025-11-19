@@ -1,5 +1,13 @@
-// src/api/venues.ts
-import firestore from '@react-native-firebase/firestore';
+// src/venues.ts (modular v22 style)
+import { getApp } from '@react-native-firebase/app';
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  onSnapshot,
+  query,
+  type FirebaseFirestoreTypes,
+} from '@react-native-firebase/firestore';
 
 export type FrontendDeal = {
   name: string;
@@ -20,6 +28,9 @@ export type FrontendVenueWithDeals = {
   deals: FrontendDeal[];
 };
 
+const app = getApp();
+const db = getFirestore(app);
+
 // ---- helpers ----
 function toVenue(doc: FirebaseFirestoreTypes.DocumentSnapshot): FrontendVenueWithDeals {
   const v = (doc.data() as any) ?? {};
@@ -31,10 +42,9 @@ function toVenue(doc: FirebaseFirestoreTypes.DocumentSnapshot): FrontendVenueWit
         start_time: d?.start_time ?? '',
         end_time: d?.end_time ?? '',
         days: Array.isArray(d?.days) ? d.days : [],
-        special_conditions:
-          Array.isArray(d?.special_conditions)
-            ? d.special_conditions.join('; ')
-            : (d?.special_conditions ?? null),
+        special_conditions: Array.isArray(d?.special_conditions)
+          ? d.special_conditions.join('; ')
+          : (d?.special_conditions ?? null),
       }))
     : [];
 
@@ -50,24 +60,27 @@ function toVenue(doc: FirebaseFirestoreTypes.DocumentSnapshot): FrontendVenueWit
 
 // ---- one-shot fetch ----
 export async function getAllVenuesWithDeals(): Promise<FrontendVenueWithDeals[]> {
-  const snap = await firestore().collection('final_schema').get();
+  const colRef = collection(db, 'final_schema');
+  const snap = await getDocs(colRef);
   return snap.docs.map(toVenue);
 }
 
-// ---- realtime subscription (optional) ----
-export function watchAllVenuesWithDeals(onChange, onError) {
-  return firestore()
-    .collection('final_schema')
-    .onSnapshot(
-      (snap) => {
-        console.log('final_schema size:', snap.size);
-        onChange(snap.docs.map(toVenue));
-      },
-      (err) => {
-        console.log('final_schema error:', err);
-        onError?.(err);
-      }
-    );
+// ---- realtime subscription ----
+export function watchAllVenuesWithDeals(
+  onChange: (v: FrontendVenueWithDeals[]) => void,
+  onError?: (e: any) => void
+) {
+  const q = query(collection(db, 'final_schema'));
+  const unsubscribe = onSnapshot(
+    q,
+    (snap) => {
+      console.log('final_schema size:', snap.size);
+      onChange(snap.docs.map(toVenue));
+    },
+    (err) => {
+      console.log('final_schema error:', err);
+      onError?.(err);
+    }
+  );
+  return unsubscribe;
 }
-
-

@@ -69,7 +69,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="index"
+        name="add_deal"
         options={{
           href: null,
         }}
@@ -80,6 +80,19 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="MainScreen"
+        options={{
+          href: null, // This hides the tab
+        }}
+      />
+       <Tabs.Screen
+        name="login"
+        options={{
+          href: null, // This hides the tab
+        }}
+      />
+
     </Tabs>
   );
 }

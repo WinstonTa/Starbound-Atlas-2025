@@ -17,7 +17,7 @@ useEffect(() => {
     },
     (e) => {
       setErr(e?.code ? `${e.code}: ${e.message}` : String(e));
-      setLoading(false);          // <- important
+      setLoading(false);          // turn off loading
     }
   );
   return unsub;

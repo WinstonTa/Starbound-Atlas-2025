@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, Pla
 import * as ImagePicker from 'expo-image-picker';
 import VenueForm from '../components/VenueForm';
 
-// For physical devices, use your computer's IP address
-const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'http://192.168.1.15:5000';
+// FOR DEVELOPMENT USE YOUR OWN IP HERE
+const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'https://lovably-trichogynial-alane.ngrok-free.dev';
 
 export default function UploadMenuScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);

@@ -1,74 +1,20 @@
-# Node modules
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-.yarn-integrity
+# VS Code
+.vscode/
 
-# Xcode
-build/
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-xcuserdata
-*.xccheckout
-*.moved-aside
-DerivedData
-*.hmap
-*.ipa
-*.xcuserstate
-project.xcworkspace
-xcuserdata/
+# Claude AI extension
+.claude/
 
-# Android
-.gradle
-/build
-/captures
-.externalNativeBuild
-.idea/
-local.properties
-*.iml
+# Windows special files
+nul
 
-# React Native specific
+# Node dependencies
+my-app/node_modules/
+
+# NPM lock file
+package-lock.json
+
+# Expo
 .expo/
-web-build/
-*.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
-# Expo specific (if using Expo)
-.expo/
-web-build/
-
-expo-env.d.ts
-
-# Python
-venv/
-env/
-ENV/
-.venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Environment variables
-.env
-.env.local
-
-# Firebase credentials
-*service_account*.json
-serviceAccountKey.json
-happy_hour_service_account.json
-
-# SSL certificates
-*.pem
-*.key
-*.crt
-*.cert
+# Documentation (optional, remove if you want to track it)
+VENUE_FORM_GUIDE.md

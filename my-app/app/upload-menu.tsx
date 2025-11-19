@@ -4,22 +4,40 @@ import * as ImagePicker from 'expo-image-picker';
 import VenueForm from '../components/VenueForm';
 
 // For physical devices, use your computer's IP address
-const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'http://192.168.68.117:5000';
+const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'http://192.168.1.15:5000';
 
 export default function UploadMenuScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedDocId, setUploadedDocId] = useState<string | null>(null);
 
-  const pickImage = async () => {
-    // Request permission
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  // 📸 Take photo using camera
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant camera roll permission');
+      Alert.alert('Permission needed', 'Please grant camera permission');
       return;
     }
 
-    // Pick image
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setSelectedImage(result.assets[0].uri);
+      setUploadedDocId(null);
+    }
+  };
+
+  // 🖼 Pick image from gallery
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please grant media library permission');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -28,13 +46,14 @@ export default function UploadMenuScreen() {
 
     if (!result.canceled && result.assets[0]) {
       setSelectedImage(result.assets[0].uri);
-      setUploadedDocId(null); // Reset if selecting new image
+      setUploadedDocId(null);
     }
   };
 
+  // 🏠 Handle form submission
   const handleVenueSubmit = async (venueData: any) => {
     if (!selectedImage) {
-      Alert.alert('Error', 'Please select a menu image first');
+      Alert.alert('Error', 'Please select or take a menu image first');
       return;
     }
 
@@ -44,24 +63,19 @@ export default function UploadMenuScreen() {
     console.log('Venue Data:', venueData);
 
     try {
-      let result;
-
-      // Create FormData
       const formData = new FormData();
       formData.append('venue_name', venueData.venue_name);
       formData.append('venue_address', JSON.stringify(venueData.address));
 
       if (Platform.OS === 'web') {
-        // Web: Use fetch with blob
         const response = await fetch(selectedImage);
         const blob = await response.blob();
         formData.append('image', blob, 'menu.jpg');
       } else {
-        // Native: Use file URI directly
         const filename = selectedImage.split('/').pop() || 'menu.jpg';
         const fileType = filename.split('.').pop();
 
-        // @ts-ignore - React Native FormData accepts URI
+        // @ts-ignore
         formData.append('image', {
           uri: selectedImage,
           name: filename,
@@ -69,17 +83,12 @@ export default function UploadMenuScreen() {
         });
       }
 
-      console.log('Sending request to backend...');
-
       const uploadResponse = await fetch(`${API_URL}/upload-menu`, {
         method: 'POST',
         body: formData,
       });
 
-      console.log('Response status:', uploadResponse.status);
-      result = await uploadResponse.json();
-      console.log('Response data:', result);
-
+      const result = await uploadResponse.json();
       if (result.success) {
         setUploadedDocId(result.document_id);
         Alert.alert(
@@ -112,16 +121,21 @@ export default function UploadMenuScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>Upload Menu</Text>
         <Text style={styles.subtitle}>
-          Select a menu image and enter venue information
+          Take a photo or select an image, then enter venue information
         </Text>
 
-        {/* Image Picker */}
-        <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
-          <Text style={styles.imagePickerButtonText}>
-            {selectedImage ? 'Change Image' : 'Select Menu Image'}
-          </Text>
-        </TouchableOpacity>
+        {/* Camera & Gallery Buttons */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={[styles.button, { backgroundColor: '#34C759' }]} onPress={takePhoto}>
+            <Text style={styles.buttonText}>📸 Take Photo</Text>
+          </TouchableOpacity>
 
+          <TouchableOpacity style={[styles.button, { backgroundColor: '#007AFF' }]} onPress={pickImage}>
+            <Text style={styles.buttonText}>🖼 From Gallery</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Image Preview */}
         {selectedImage && (
           <View style={styles.imagePreview}>
             <Image source={{ uri: selectedImage }} style={styles.image} />
@@ -172,14 +186,19 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 20,
   },
-  imagePickerButton: {
-    backgroundColor: '#007AFF',
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  button: {
+    flex: 1,
+    marginHorizontal: 5,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 20,
   },
-  imagePickerButtonText: {
+  buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
@@ -189,6 +208,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
   },
   image: {

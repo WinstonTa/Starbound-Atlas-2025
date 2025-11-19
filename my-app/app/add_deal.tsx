@@ -1,13 +1,13 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRef, useState } from "react";
 import { View, Text, Button, Image, StyleSheet, ActivityIndicator, Alert } from "react-native";
-import { testUpload, type MenuParsing } from "../src/api";
+import { testUpload } from "../src/api";
 
 export default function AddDealScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [uploading, setUploading] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [result, setResult] = useState<MenuParsing | null>(null);
+  const [result, setResult] = useState<boolean | null>(null);
   const cameraRef = useRef<CameraView>(null);
 
   if (!permission) return <View />;
@@ -33,9 +33,9 @@ export default function AddDealScreen() {
     if (!photoUri) return;
     try {
       setUploading(true);
-      const parsed = await testUpload(photoUri);
-      setResult(parsed);
-      Alert.alert("Parsed", `Found ${parsed.deals?.length ?? 0} deal(s)`);
+      const success = await testUpload(photoUri);
+      setResult(success);
+      Alert.alert("Upload", success ? "Upload successful!" : "Upload failed");
     } catch (e: any) {
       Alert.alert("Upload failed", e.message ?? "Unknown error");
     } finally {

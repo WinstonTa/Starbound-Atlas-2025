@@ -1,22 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
-import firestore from '@react-native-firebase/firestore';
 import { useEffect } from 'react';
 
 
 export default function HomeScreen() {
-  // return (
-  //   <View style={styles.container}>
-  //     <Text style={styles.text}>HappyMapper First Screen</Text>
-  //   </View>
-  // );
-
-  // debuggging firebase connection
   useEffect(() => {
-    firestore().collection('deals').limit(1).get()
-      .then(() => console.log('Firestore OK'))
-      .catch(e => console.log('Firestore ERR', e));
+    console.log('Home screen loaded');
   }, []);
-  return <View styles={ styles.container }><Text>Home page, testing firebase connection, check logs</Text></View>;
+
+  return <View style={styles.container}><Text>Home page - Go to Upload tab to upload menus!</Text></View>;
 }
 
 const styles = StyleSheet.create({

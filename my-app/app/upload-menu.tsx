@@ -3,9 +3,8 @@ import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, Pla
 import * as ImagePicker from 'expo-image-picker';
 import VenueForm from '../components/VenueForm';
 
-// FOR DEVELOPMENT USE YOUR OWN IP HERE
-const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'https://lovably-trichogynial-alane.ngrok-free.dev';
-
+// Deployed API URL using vercel
+const API_URL = "https://happymapper-mecrm7zjy-wtl04s-projects.vercel.app/"
 export default function UploadMenuScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);

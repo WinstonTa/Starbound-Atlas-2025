@@ -122,15 +122,15 @@ export default function VenueForm({ onSubmit, initialData }: VenueFormProps) {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    elevation: 3,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    elevation: 1,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#333',
+    color: '#E8886B',
   },
   inputGroup: {
     marginBottom: 15,
@@ -154,9 +154,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#E8886B',
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 16,
     alignItems: 'center',
     marginTop: 10,
   },

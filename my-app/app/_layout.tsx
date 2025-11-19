@@ -1,15 +1,28 @@
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
+import { Text as RNText } from 'react-native';
 
 export default function TabLayout() {
+  const pathname = usePathname();
+  const isIndexScreen = pathname === '/' || pathname === '/index';
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'white',
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#E8D5C4',
+          paddingTop: 8,
+          paddingBottom: 8,
+          height: 65,
+          display: isIndexScreen ? 'none' : 'flex',
         },
+        tabBarActiveTintColor: '#E8886B',
+        tabBarInactiveTintColor: '#A67B5B',
         tabBarLabelStyle: {
-          color: 'black',
+          fontSize: 12,
+          fontWeight: '600',
         },
       }}>
       <Tabs.Screen
@@ -17,32 +30,54 @@ export default function TabLayout() {
         options={{
           title: 'Map',
           tabBarLabel: 'Map',
+          tabBarIcon: () => <RNText style={{ fontSize: 22 }}>📍</RNText>,
         }}
       />
       <Tabs.Screen
         name="list"
         options={{
-          title: 'List',
-          tabBarLabel: 'List',
+          title: 'Favorites',
+          tabBarLabel: 'Favorites',
+          tabBarIcon: () => <RNText style={{ fontSize: 22 }}>⭐</RNText>,
         }}
       />
       <Tabs.Screen
         name="upload-menu"
         options={{
-          title: 'Upload Deal',
-          tabBarLabel: 'Upload',
-        }}
-      />
-      <Tabs.Screen
-        name="index"
-        options={{
-          href: null, // This hides the tab
+          title: 'Add Deal',
+          tabBarLabel: 'Add Deal',
+          tabBarIcon: ({ focused }) => (
+            <RNText style={{
+              fontSize: focused ? 28 : 24,
+              backgroundColor: '#E8886B',
+              borderRadius: 25,
+              width: 50,
+              height: 50,
+              textAlign: 'center',
+              lineHeight: 50,
+              marginTop: -20,
+            }}>
+              📷
+            </RNText>
+          ),
         }}
       />
       <Tabs.Screen
         name="add_deal"
         options={{
-          href: null, // This hides the tab
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="add_deal"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="splash"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen

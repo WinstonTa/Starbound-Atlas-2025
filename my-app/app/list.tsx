@@ -46,16 +46,38 @@ export default function ListScreen() {
   if (err) return <Text style={{ margin: 16 }}>Error: {err}</Text>;
 
   return (
-    <FlatList
-      contentContainerStyle={styles.listContainer}
-      data={venues}
-      keyExtractor={(x, i) => String(x.venue_id ?? i)}
-      renderItem={({ item }) => <ListBox venue={item} />}
-    />
+    <View style={styles.wrapper}>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>HappyMapper</Text>
+      </View>
+      <ScrollView>
+        <View style={styles.container}>
+          <View style={styles.listContainer}>
+            {venues.map((venue, index) => (
+              <ListBox key={String(venue.venue_id ?? index)} venue={venue} />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  listContainer: { backgroundColor: '#F4EAE1' },
+  wrapper: { flex: 1, backgroundColor: '#F5EBE0' },
+  header: {
+    backgroundColor: '#F5EBE0',
+    paddingTop: 50,
+    paddingBottom: 15,
+    alignItems: 'center',
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: '#E8886B',
+    letterSpacing: 1,
+  },
+  container: { flex: 1, alignItems: 'center', backgroundColor: '#F4EAE1' },
+  listContainer: { marginTop: 40, margin: 20 },
 });
 

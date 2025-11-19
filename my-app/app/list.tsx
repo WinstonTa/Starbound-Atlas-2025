@@ -1,6 +1,7 @@
+// app/list.tsx
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { getAllVenuesWithDeals, type FrontendVenueWithDeals } from '../src/venues';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { watchAllVenuesWithDeals, type FrontendVenueWithDeals } from '../src/venues';
 import ListBox from '../components/ListBox';
 
 export default function ListScreen() {
@@ -8,41 +9,34 @@ export default function ListScreen() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const v = await getAllVenuesWithDeals();
-        setVenues(Array.isArray(v) ? v : []);
-      } catch (e: any) {
-        setErr(e?.message ?? String(e));
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+useEffect(() => {
+  const unsub = watchAllVenuesWithDeals(
+    (v) => {
+      setVenues(v);
+      setLoading(false);
+    },
+    (e) => {
+      setErr(e?.code ? `${e.code}: ${e.message}` : String(e));
+      setLoading(false);          // <- important
+    }
+  );
+  return unsub;
+}, []);
 
-  if (loading) {
-    return <ActivityIndicator style={{ marginTop: 40 }} />;
-  }
-  if (err) {
-    return <Text style={{ margin: 16 }}>Error: {err}</Text>;
-  }
+  if (loading) return <ActivityIndicator style={{ marginTop: 40 }} />;
+  if (err) return <Text style={{ margin: 16 }}>Error: {err}</Text>;
 
   return (
-    <ScrollView>
-      <View style={styles.container}>
-        <View style={styles.listContainer}>
-          {venues.map((venue, index) => (
-            <ListBox key={String(venue.venue_id ?? index)} venue={venue} />
-          ))}
-        </View>
-      </View>
-    </ScrollView>
+    <FlatList
+      contentContainerStyle={styles.listContainer}
+      data={venues}
+      keyExtractor={(x, i) => String(x.venue_id ?? i)}
+      renderItem={({ item }) => <ListBox venue={item} />}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', backgroundColor: '#F4EAE1' },
-  listContainer: { marginTop: 40, margin: 20 },
+  listContainer: { padding: 20, backgroundColor: '#F4EAE1' },
 });
 

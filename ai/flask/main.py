@@ -75,7 +75,9 @@ def upload_menu():
 
     # Check if image is in request
     if "image" not in request.files:
-        print(f"[ERROR] No image in request.files. Available keys: {list(request.files.keys())}")
+        print(
+            f"[ERROR] No image in request.files. Available keys: {list(request.files.keys())}"
+        )
         return jsonify({"success": False, "error": "No image provided"}), 400
 
     file = request.files["image"]
@@ -97,8 +99,8 @@ def upload_menu():
     collection = request.form.get("collection", "final_schema")
 
     # Get venue information from form data
-    venue_name = request.form.get('venue_name')
-    venue_address = request.form.get('venue_address')  # Expecting JSON string
+    venue_name = request.form.get("venue_name")
+    venue_address = request.form.get("venue_address")  # Expecting JSON string
 
     # Save file temporarily
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
@@ -116,17 +118,18 @@ def upload_menu():
         # If venue information is provided, update the document
         if venue_name or venue_address:
             import json
+
             venue_updates = {}
 
             if venue_name:
-                venue_updates['venue_name'] = venue_name
+                venue_updates["venue_name"] = venue_name
 
             if venue_address:
                 try:
                     address_data = json.loads(venue_address)
-                    venue_updates['address'] = address_data
+                    venue_updates["address"] = address_data
                 except json.JSONDecodeError:
-                    print(f"[WARNING] Invalid venue_address JSON, skipping")
+                    print("[WARNING] Invalid venue_address JSON, skipping")
 
             if venue_updates:
                 uploader.update_menu(doc_id, venue_updates, collection=collection)
@@ -307,7 +310,5 @@ if __name__ == "__main__":
     print("  GET  /get-menu/<id>       - Get menu by ID")
     print("  GET  /get-all-menus       - Get all menus")
     print("=" * 70)
-    print("Starting server on http://0.0.0.0:5000")
+    # print("Starting server on http://0.0.0.0:5000")
     print("=" * 70)
-
-    app.run(host="0.0.0.0", port=5000, debug=True)

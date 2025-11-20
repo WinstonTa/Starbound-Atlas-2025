@@ -25,6 +25,7 @@ export type FrontendVenueWithDeals = {
   latitude: number | null;
   longitude: number | null;
   address: string | Record<string, unknown> | null;
+  image_url?: string | null;
   deals: FrontendDeal[];
 };
 
@@ -54,6 +55,7 @@ function toVenue(doc: FirebaseFirestoreTypes.DocumentSnapshot): FrontendVenueWit
     latitude: v.latitude ?? null,
     longitude: v.longitude ?? null,
     address: v.address ?? null,
+    image_url: v.image_url ?? null,
     deals,
   };
 }

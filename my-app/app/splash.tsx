@@ -11,7 +11,7 @@ export default function SplashScreen() {
 
   useEffect(() => {
     // Loop the background movement
-    Animated.loop(
+    const backgroundLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(animatedValue, {
           toValue: 1,
@@ -24,15 +24,19 @@ export default function SplashScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    backgroundLoop.start();
 
     // Navigate after 4 seconds
     const timer = setTimeout(() => {
       router.replace('/map');
     }, 4000);
 
-    return () => clearTimeout(timer);
-  }, []);
+    return () => {
+      clearTimeout(timer);
+      backgroundLoop.stop();
+    };
+  }, [animatedValue, router]);
 
   // Move background diagonally
   const translateX = animatedValue.interpolate({

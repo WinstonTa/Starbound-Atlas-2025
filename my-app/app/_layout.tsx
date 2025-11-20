@@ -1,9 +1,24 @@
 import { Tabs, usePathname } from 'expo-router';
-import { Text as RNText } from 'react-native';
+import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import firebase from '@react-native-firebase/app';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+
+// Initialize Firebase.
+// This should only be done once, at the root of your application.
+if (firebase.apps.length === 0) {
+  console.log('Initializing Firebase...');
+  firebase.initializeApp();
+} else {
+  console.log('Firebase already initialized.');
+}
 
 export default function TabLayout() {
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
   const isIndexScreen = pathname === '/' || pathname === '/index';
+  const isLoginScreen = pathname === '/login';
+  const isSignUpScreen = pathname === '/signup';
 
   return (
     <Tabs
@@ -14,9 +29,9 @@ export default function TabLayout() {
           borderTopWidth: 1,
           borderTopColor: '#E8D5C4',
           paddingTop: 8,
-          paddingBottom: 8,
-          height: 65,
-          display: isIndexScreen ? 'none' : 'flex',
+          paddingBottom: Platform.OS === 'android' ? insets.bottom + 8 : 8,
+          height: Platform.OS === 'android' ? 65 + insets.bottom : 65,
+          display: (isIndexScreen || isLoginScreen || isSignUpScreen) ? 'none' : 'flex',
         },
         tabBarActiveTintColor: '#E8886B',
         tabBarInactiveTintColor: '#A67B5B',
@@ -30,22 +45,27 @@ export default function TabLayout() {
         options={{
           title: 'Map',
           tabBarLabel: 'Map',
-          tabBarIcon: () => 
-            <RNText style={{ 
-              fontSize: 22 
-            }}>📍</RNText>,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'map' : 'map-outline'}
+              size={26}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="list"
         options={{
           title: 'Saved Deals',
-          tabBarLabel: 'Saved Deals',
-          tabBarIcon: () => 
-            <RNText style={{ 
-              fontSize: 22,
-              marginTop: -5,
-            }}>⭐</RNText>,
+          tabBarLabel: 'Favorites',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'star' : 'star-outline'}
+              size={26}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
@@ -53,15 +73,12 @@ export default function TabLayout() {
         options={{
           title: 'Add Deal',
           tabBarLabel: 'Add Deal',
-          tabBarIcon: ({ focused }) => (
-            <RNText style={{
-              fontSize: 22,
-              textAlign: 'center',
-              lineHeight: 50,
-              marginTop: -15,
-            }}>
-              📷
-            </RNText>
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'camera-plus' : 'camera-plus-outline'}
+              size={28}
+              color={color}
+            />
           ),
         }}
       />
@@ -85,6 +102,12 @@ export default function TabLayout() {
       />
        <Tabs.Screen
         name="login"
+        options={{
+          href: null, // This hides the tab
+        }}
+      />
+      <Tabs.Screen
+        name="signup"
         options={{
           href: null, // This hides the tab
         }}

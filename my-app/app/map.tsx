@@ -1,9 +1,17 @@
 import { useEffect, useState, useRef } from 'react';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { StyleSheet, View, ActivityIndicator, Text } from 'react-native';
+import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
 
 // Minimal local type
+type Deal = {
+  name?: string;
+  description?: string | null;
+  days?: string[];
+  start_time?: string;
+  end_time?: string;
+};
+
 type Venue = {
   venue_id: string;
   venue_name?: string;
@@ -11,7 +19,7 @@ type Venue = {
   longitude?: number | null;
   address?: string | Record<string, any> | null;
   image_url?: string | null;
-  deals?: any[];
+  deals?: Deal[];
 };
 
 export default function MapScreen() {
@@ -47,15 +55,10 @@ export default function MapScreen() {
         if (!mounted) return;
         if (mod.watchAllVenuesWithDeals) {
           unsubRef.current = mod.watchAllVenuesWithDeals(
-            (v: Venue[]) => {
-              setVenues(v);
-            },
-            (err: any) => {
-              console.warn('watch venues error', err);
-            }
+            (v: Venue[]) => setVenues(v),
+            (err: any) => console.warn('watch venues error', err)
           );
         } else {
-          // if only one-shot exists, call it
           const v = await mod.getAllVenuesWithDeals();
           if (mounted) setVenues(v);
         }
@@ -72,35 +75,29 @@ export default function MapScreen() {
     return () => {
       mounted = false;
       if (unsubRef.current) {
-        try {
-          unsubRef.current();
-        } catch {}
+        try { unsubRef.current(); } catch {}
         unsubRef.current = null;
       }
     };
   }, []);
 
-  // Try geocoding addresses for venues that lack coords (one-time per venue_id)
+  // Attempt client-side geocoding for venues without coords (one-time cached)
   useEffect(() => {
     const toGeocode = venues.filter(v => (!v.latitude || !v.longitude) && v.address && !geocodeCache.current[v.venue_id]);
     if (toGeocode.length === 0) return;
-
     (async () => {
       for (const v of toGeocode) {
         let addrStr = '';
-        if (typeof v.address === 'string') {
-          addrStr = v.address;
-        } else if (v.address && typeof v.address === 'object') {
+        if (typeof v.address === 'string') addrStr = v.address;
+        else if (v.address && typeof v.address === 'object') {
           const { street, city, state, postalCode, country } = v.address as any;
           addrStr = [street, city, state, postalCode, country].filter(Boolean).join(', ');
         }
         if (!addrStr) continue;
         try {
-          // caution: geocoding many items can be rate-limited; prefer precomputed coords in DB
           const results = await Location.geocodeAsync(addrStr);
           if (results && results[0]) {
             geocodeCache.current[v.venue_id] = { latitude: results[0].latitude, longitude: results[0].longitude };
-            // trigger re-render
             setVenues(prev => prev.map(x => (x.venue_id === v.venue_id ? { ...x } : x)));
           }
         } catch (e) {
@@ -115,6 +112,18 @@ export default function MapScreen() {
     if (typeof a === 'string') return a;
     const { street, city, state, postalCode, country } = a as any;
     return [street, city, state, postalCode, country].filter(Boolean).join(', ');
+  }
+
+  function formatFirstDeal(d?: Deal[] | null) {
+    if (!d || d.length === 0) return null;
+    const first = d[0];
+    const name = first.name ?? '';
+    const description = first.description ?? '';
+    const days = Array.isArray(first.days) ? first.days.join(', ') : '';
+    const times = (first.start_time ? first.start_time : '') + (first.end_time ? ` - ${first.end_time}` : '');
+    const parts = [name, description, days, times].filter(Boolean);
+    // join with new lines for readability in callout
+    return parts.join('\n');
   }
 
   if (!region) {
@@ -139,13 +148,24 @@ export default function MapScreen() {
         const lat = v.latitude ?? cached?.latitude;
         const lng = v.longitude ?? cached?.longitude;
         if (lat == null || lng == null) return null;
+
+        const addressText = formatAddress(v.address);
+        const dealText = formatFirstDeal(v.deals);
+        const calloutText = [addressText, dealText].filter(Boolean).join('\n\n');
+
         return (
           <Marker
             key={v.venue_id}
             coordinate={{ latitude: lat, longitude: lng }}
             title={v.venue_name ?? 'Venue'}
-            description={formatAddress(v.address)}
-          />
+          >
+            <Callout tooltip={false}>
+              <View style={{ maxWidth: 260, padding: 8 }}>
+                <Text style={{ fontWeight: '700', marginBottom: 4 }}>{v.venue_name ?? 'Venue'}</Text>
+                <Text>{calloutText || 'No address or deal info available'}</Text>
+              </View>
+            </Callout>
+          </Marker>
         );
       })}
     </MapView>

@@ -1,53 +1,28 @@
-import { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
-export default function SplashScreen() {
+export default function StartupScreen() {
   const router = useRouter();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 20,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
     const timer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1.1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        router.replace('/map');
-      });
-    }, 3000);
+      router.replace('/login');
+    }, 4500);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [router]);
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <Text style={styles.title}>happy{'\n'}mapper</Text>
-        <Text style={styles.subtitle}>all day, every day</Text>
-      </Animated.View>
+      <View style={styles.card}>
+        <Text style={styles.logo}>happy{'\n'}mapper</Text>
+        <Text style={styles.tagline}>all day, every day</Text>
+      </View>
+      <View style={styles.loader}>
+        <Text style={styles.loadingText}>Cooking…</Text>
+        <ActivityIndicator color="#D6453B" size="small" style={styles.spinner} />
+      </View>
     </View>
   );
 }
@@ -55,24 +30,58 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5EBE0',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F5EBE0',
+    paddingHorizontal: 24,
   },
-  content: {
+  card: {
+    backgroundColor: '#F7E8DE',
+    borderRadius: 24,
+    paddingVertical: 60,
+    paddingHorizontal: 50,
+    borderWidth: 2,
+    borderColor: '#E0C5B1',
     alignItems: 'center',
+    shadowColor: '#C68C75',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 10,
   },
-  title: {
-    fontSize: 80,
-    fontWeight: 'bold',
-    color: '#E8886B',
+  logo: {
+    fontSize: 48,
+    fontWeight: '500',
+    color: '#D6453B',
     textAlign: 'center',
-    lineHeight: 80,
-    marginBottom: 20,
+    lineHeight: 54,
+    letterSpacing: 4,
+    fontFamily: Platform.select({
+      ios: 'Georgia',
+      android: 'serif',
+      default: 'serif',
+    }),
+    textShadowColor: 'rgba(214, 69, 59, 0.35)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 8,
   },
-  subtitle: {
+  tagline: {
     fontSize: 16,
-    color: '#E8886B',
+    color: '#A67B5B',
+    marginTop: 12,
     textAlign: 'center',
+  },
+  loader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  loadingText: {
+    color: '#A67B5B',
+    fontSize: 14,
+    marginRight: 8,
+  },
+  spinner: {
+    marginLeft: 4,
   },
 });

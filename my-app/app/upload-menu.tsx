@@ -1,15 +1,31 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
+import { useState, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, Platform, Animated } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import VenueForm from '../components/VenueForm';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import { useFocusEffect } from '@react-navigation/native';
 
 // FOR DEVELOPMENT USE YOUR OWN IP HERE
-const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'https://lovably-trichogynial-alane.ngrok-free.dev';
+const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'http://192.168.68.115:5000';
 
 export default function UploadMenuScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedDocId, setUploadedDocId] = useState<string | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useFocusEffect(
+    useCallback(() => {
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      return () => fadeAnim.stopAnimation();
+    }, [fadeAnim])
+  );
 
   // 📸 Take photo using camera
   const takePhoto = async () => {
@@ -91,6 +107,40 @@ export default function UploadMenuScreen() {
       const result = await uploadResponse.json();
       if (result.success) {
         setUploadedDocId(result.document_id);
+
+        // Track this deal in user's addedDeals array if user is authenticated
+        const currentUser = auth().currentUser;
+        if (currentUser) {
+          try {
+            const userRef = firestore().collection('user_data').doc(currentUser.uid);
+            const userDoc = await userRef.get();
+
+            if (!userDoc.exists) {
+              // Create user document if it doesn't exist (e.g., guest user who later authenticates)
+              await userRef.set({
+                uid: currentUser.uid,
+                email: currentUser.email || '',
+                displayName: currentUser.displayName || '',
+                photoURL: currentUser.photoURL || '',
+                createdAt: firestore.FieldValue.serverTimestamp(),
+                lastLoginAt: firestore.FieldValue.serverTimestamp(),
+                provider: currentUser.providerData[0]?.providerId || 'unknown',
+                addedDeals: [result.document_id],
+                savedDeals: [],
+              });
+            } else {
+              // Update existing document
+              await userRef.update({
+                addedDeals: firestore.FieldValue.arrayUnion(result.document_id),
+              });
+            }
+            console.log(`Added deal ${result.document_id} to user ${currentUser.uid}'s addedDeals`);
+          } catch (error) {
+            console.error('Error updating user addedDeals:', error);
+            // Don't fail the entire upload if tracking fails
+          }
+        }
+
         Alert.alert(
           'Success!',
           `Menu uploaded successfully!\nDocument ID: ${result.document_id}`,
@@ -117,7 +167,7 @@ export default function UploadMenuScreen() {
   };
 
   return (
-    <View style={styles.wrapper}>
+    <Animated.View style={[styles.wrapper, { opacity: fadeAnim }]}>
       <View style={styles.headerBar}>
         <Text style={styles.headerText}>HappyMapper</Text>
       </View>
@@ -178,7 +228,7 @@ export default function UploadMenuScreen() {
         </View>
       )}
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -195,8 +245,8 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 24,
-    fontWeight: '400',
-    color: '#E8886B',
+    fontWeight: '500',
+    color: '#D6453B',
     letterSpacing: 1,
   },
   container: {

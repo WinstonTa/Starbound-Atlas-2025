@@ -12,16 +12,20 @@
           "package_name": "com.happymapper.app"
         }
       },
-<<<<<<< HEAD
       "oauth_client": [
+        {
+          "client_id": "122197808815-il8i5q11veqsk15ggh2r65rmb3694ag1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.happymapper.app",
+            "certificate_hash": "d6d9eefda8331e46eae3b77e7d07715111a3b874"
+          }
+        },
         {
           "client_id": "122197808815-hbnkec1t6hi9og08blonscociahij130.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
-=======
-      "oauth_client": [],
->>>>>>> cd943ec9675504de7d1d4f083c864fa215685927
       "api_key": [
         {
           "current_key": "AIzaSyA_2ng5CAA92h30L9ec_NK1tDqJGnb5H3Y"
@@ -29,7 +33,6 @@
       ],
       "services": {
         "appinvite_service": {
-<<<<<<< HEAD
           "other_platform_oauth_client": [
             {
               "client_id": "122197808815-hbnkec1t6hi9og08blonscociahij130.apps.googleusercontent.com",
@@ -43,9 +46,6 @@
               }
             }
           ]
-=======
-          "other_platform_oauth_client": []
->>>>>>> cd943ec9675504de7d1d4f083c864fa215685927
         }
       }
     }

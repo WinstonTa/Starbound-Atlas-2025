@@ -21,7 +21,12 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "minSdkVersion": 23,
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAsUwjpF4hf52kntpCQt2w3diKT_Dn9S2o"
+        }
+      }
     },
     "web": {
       "output": "static",

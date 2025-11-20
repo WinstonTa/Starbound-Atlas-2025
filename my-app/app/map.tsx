@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { StyleSheet, View, ActivityIndicator, Text, TextInput, TouchableOpacity } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
+import { StyleSheet, View, ActivityIndicator, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
+import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,6 +31,7 @@ export default function MapScreen() {
   const geocodeCache = useRef<Record<string, { latitude: number; longitude: number }>>({});
   const unsubRef = useRef<() => void | null>(null);
   const mapRef = useRef<any>(null);
+  const markerRefs = useRef<Record<string, any>>({});
 
   // user location
   useEffect(() => {
@@ -199,12 +200,14 @@ export default function MapScreen() {
       <MapView
         ref={mapRef}
         style={styles.map}
+        provider={PROVIDER_GOOGLE}             // explicitly set google as provider of map
         region={region}
-        showsUserLocation={true}
-        followsUserLocation={true}
-        showsMyLocationButton={true}
+        showsUserLocation
+        followsUserLocation
+        showsMyLocationButton
       >
         <Marker coordinate={region} title="You Are Here" />
+
         {venues.map(v => {
           const cached = geocodeCache.current[v.venue_id];
           const lat = v.latitude ?? cached?.latitude;
@@ -218,20 +221,32 @@ export default function MapScreen() {
           return (
             <Marker
               key={v.venue_id}
+              ref={ref => { markerRefs.current[v.venue_id] = ref; }}
               coordinate={{ latitude: lat, longitude: lng }}
               title={v.venue_name ?? 'Venue'}
+              // Use default Android info window; custom callout on iOS
+              description={Platform.OS === 'android' ? (calloutText || 'No address or deal info available') : undefined}
+              tracksViewChanges={Platform.OS === 'ios'}  // disable the problematic optimization on Android
+              onPress={() => {
+                if (Platform.OS === 'android') {
+                  requestAnimationFrame(() => {
+                    try { markerRefs.current[v.venue_id]?.showCallout(); } catch {}
+                  });
+                }
+              }}
             >
-              <Callout tooltip={false}>
-                <View style={{ maxWidth: 260, padding: 8 }}>
-                  <Text style={{ fontWeight: '700', marginBottom: 4 }}>{v.venue_name ?? 'Venue'}</Text>
-                  <Text>{calloutText || 'No address or deal info available'}</Text>
-                </View>
-              </Callout>
+              {Platform.OS === 'ios' && (
+                <Callout tooltip={false}>
+                  <View style={{ maxWidth: 260, padding: 8 }}>
+                    <Text style={{ fontWeight: '700', marginBottom: 4 }}>{v.venue_name ?? 'Venue'}</Text>
+                    <Text>{calloutText || 'No address or deal info available'}</Text>
+                  </View>
+                </Callout>
+              )}
             </Marker>
           );
         })}
       </MapView>
-
       {/* Search bar overlay */}
       <View
         style={[styles.searchContainer, { top: insets.top + 12 }]}
@@ -294,3 +309,4 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
 });
+

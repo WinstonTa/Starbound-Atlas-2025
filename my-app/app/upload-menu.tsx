@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, Platform, Animated } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, Platform, Animated } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import VenueForm from '../components/VenueForm';
 import auth from '@react-native-firebase/auth';
@@ -142,7 +142,7 @@ export default function UploadMenuScreen() {
 
         Alert.alert(
           'Success!',
-          `Menu uploaded successfully!\nDocument ID: ${result.document_id}`,
+          `Menu uploaded successfully!\nThanks for sharing!`,
           [
             {
               text: 'Upload Another',
@@ -164,6 +164,18 @@ export default function UploadMenuScreen() {
       setUploading(false);
     }
   };
+
+
+  if (uploading) {
+    return (
+      <Animated.View style={styles.loadingContainer}>
+         <View style={styles.spinner}>
+            <Text style={styles.spinnerText}>⏳</Text>
+          </View>
+        <Text style={styles.loadingText}>Uploading deal data...</Text>
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View style={[styles.wrapper, { opacity: fadeAnim }]}>
@@ -345,6 +357,12 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     marginBottom: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F4EAE1",
   },
   uploadingContainer: {
     backgroundColor: '#FFF8E1',

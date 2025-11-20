@@ -1,5 +1,17 @@
-import { useState, useRef, useCallback } from 'react';
-import { ActivityIndicator, View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, Platform, Animated } from 'react-native';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  ActivityIndicator,
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Platform,
+  Animated,
+  Easing,
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import VenueForm from '../components/VenueForm';
 import auth from '@react-native-firebase/auth';
@@ -13,6 +25,30 @@ export default function UploadMenuScreen() {
   const [uploading, setUploading] = useState(false);
   const [uploadedDocId, setUploadedDocId] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // 🌀 Spinner animation setup
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (uploading) {
+      Animated.loop(
+        Animated.timing(spinAnim, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      spinAnim.stopAnimation();
+      spinAnim.setValue(0);
+    }
+  }, [uploading]);
+
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -165,15 +201,15 @@ export default function UploadMenuScreen() {
     }
   };
 
-
+  // 🌀 Show animated spinner while uploading
   if (uploading) {
     return (
-      <Animated.View style={styles.loadingContainer}>
-         <View style={styles.spinner}>
-            <Text style={styles.spinnerText}>⏳</Text>
-          </View>
+      <View style={styles.loadingContainer}>
+        <Animated.View style={[styles.spinner, { transform: [{ rotate: spin }] }]}>
+          <Text style={styles.spinnerText}>⏳</Text>
+        </Animated.View>
         <Text style={styles.loadingText}>Uploading deal data...</Text>
-      </Animated.View>
+      </View>
     );
   }
 
@@ -185,59 +221,48 @@ export default function UploadMenuScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={styles.title}>Add Deal</Text>
-          <Text style={styles.subtitle}>
-            Capture the menu to add deals
-          </Text>
+          <Text style={styles.subtitle}>Capture the menu to add deals</Text>
         </View>
 
-      {!selectedImage ? (
-        <View style={styles.uploadSection}>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
-              <Text style={styles.cameraIcon}>📷</Text>
-              <Text style={styles.buttonText}>Camera</Text>
-            </TouchableOpacity>
+        {!selectedImage ? (
+          <View style={styles.uploadSection}>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
+                <Text style={styles.cameraIcon}>📷</Text>
+                <Text style={styles.buttonText}>Camera</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
-              <Text style={styles.galleryIcon}>🖼️</Text>
-              <Text style={styles.buttonText}>Gallery</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
+                <Text style={styles.galleryIcon}>🖼️</Text>
+                <Text style={styles.buttonText}>Gallery</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      ) : (
-        <View style={styles.previewSection}>
-          <View style={styles.imagePreview}>
-            <Image source={{ uri: selectedImage }} style={styles.image} />
-            <TouchableOpacity
-              style={styles.changeButton}
-              onPress={() => setSelectedImage(null)}
-            >
-              <Text style={styles.changeButtonText}>Change Photo</Text>
-            </TouchableOpacity>
-          </View>
+        ) : (
+          <View style={styles.previewSection}>
+            <View style={styles.imagePreview}>
+              <Image source={{ uri: selectedImage }} style={styles.image} />
+              <TouchableOpacity
+                style={styles.changeButton}
+                onPress={() => setSelectedImage(null)}
+              >
+                <Text style={styles.changeButtonText}>Change Photo</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.formContainer}>
-            <VenueForm onSubmit={handleVenueSubmit} />
+            <View style={styles.formContainer}>
+              <VenueForm onSubmit={handleVenueSubmit} />
+            </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {uploading && (
-        <View style={styles.uploadingContainer}>
-          <View style={styles.spinner}>
-            <Text style={styles.spinnerText}>⏳</Text>
+        {uploadedDocId && (
+          <View style={styles.successContainer}>
+            <Text style={styles.successIcon}>✓</Text>
+            <Text style={styles.successText}>Deal Added Successfully!</Text>
+            <Text style={styles.docIdText}>ID: {uploadedDocId}</Text>
           </View>
-          <Text style={styles.uploadingText}>Processing your menu...</Text>
-        </View>
-      )}
-
-      {uploadedDocId && (
-        <View style={styles.successContainer}>
-          <Text style={styles.successIcon}>✓</Text>
-          <Text style={styles.successText}>Deal Added Successfully!</Text>
-          <Text style={styles.docIdText}>ID: {uploadedDocId}</Text>
-        </View>
-      )}
+        )}
       </ScrollView>
     </Animated.View>
   );
@@ -360,17 +385,9 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F4EAE1",
-  },
-  uploadingContainer: {
-    backgroundColor: '#FFF8E1',
-    borderRadius: 16,
-    padding: 30,
+    justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
-    marginTop: 20,
+    backgroundColor: '#F4EAE1',
   },
   spinner: {
     marginBottom: 15,
@@ -378,7 +395,7 @@ const styles = StyleSheet.create({
   spinnerText: {
     fontSize: 40,
   },
-  uploadingText: {
+  loadingText: {
     color: '#F57C00',
     textAlign: 'center',
     fontSize: 18,
@@ -412,3 +429,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

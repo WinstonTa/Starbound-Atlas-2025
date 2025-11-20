@@ -18,3 +18,5 @@ package-lock.json
 
 # Documentation (optional, remove if you want to track it)
 VENUE_FORM_GUIDE.md
+
+node_modules/

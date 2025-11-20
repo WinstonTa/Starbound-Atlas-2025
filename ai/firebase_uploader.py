@@ -6,9 +6,10 @@ Extracts menu information using Gemini Vision and uploads to Firestore
 import os
 from dotenv import load_dotenv
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage
 from datetime import datetime
 from vision_parser import VisionMenuParser
+import uuid
 
 
 class FirebaseUploader:
@@ -37,7 +38,9 @@ class FirebaseUploader:
 
         cred = credentials.Certificate(service_account_path)
         if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
+            firebase_admin.initialize_app(cred, {
+                'storageBucket': 'happy-hour-mvp.firebasestorage.app'
+            })
             print("[OK] Firebase initialized")
         else:
             print("[OK] Using existing Firebase connection")
@@ -45,8 +48,37 @@ class FirebaseUploader:
         self.db = firestore.client()
         print("[OK] Connected to Firestore")
 
+        self.bucket = storage.bucket()
+        print("[OK] Connected to Firebase Storage")
+
         # Initialize Vision parser
         self.parser = VisionMenuParser()
+
+    def upload_image_to_storage(self, image_path):
+        """
+        Upload image to Firebase Storage
+
+        Args:
+            image_path: Path to the image file
+
+        Returns:
+            str: Public URL of the uploaded image
+        """
+        # Generate unique filename
+        file_extension = os.path.splitext(image_path)[1]
+        unique_filename = f"menu_images/{uuid.uuid4()}{file_extension}"
+
+        # Upload to Firebase Storage
+        blob = self.bucket.blob(unique_filename)
+        blob.upload_from_filename(image_path, content_type=f'image/{file_extension[1:]}')
+
+        # Make the blob publicly accessible
+        blob.make_public()
+
+        print(f"[OK] Image uploaded to Storage: {unique_filename}")
+
+        # Return the public URL
+        return f"https://storage.googleapis.com/{self.bucket.name}/{unique_filename}"
 
     def upload_menu(self, image_path, collection='final_schema'):
         """
@@ -63,8 +95,14 @@ class FirebaseUploader:
         print(f"Processing: {image_path}")
         print(f"{'='*70}\n")
 
+        # Upload image to Firebase Storage first
+        image_url = self.upload_image_to_storage(image_path)
+
         # Extract menu data with Gemini Vision
         data = self.parser.parse_menu(image_path)
+
+        # Add image URL to the data
+        data['image_url'] = image_url
 
         # Add metadata
         data['metadata'] = {

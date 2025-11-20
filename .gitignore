@@ -25,3 +25,7 @@ node_modules/
 paddle_ocr/happy_hour_service_account.json
 **/service_account.json
 **/*_service_account.json
+
+# Google Stuff DO NOT SHOW 
+./my-app/GoogleService-Info.plist
+./my-app/google-services.json

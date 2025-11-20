@@ -32,7 +32,7 @@ Happy Mapper helps users find nearby bars and restaurants offering happy hour sp
 
 https://drive.google.com/file/d/1XkuNGqqg6zEVLzDwxyK_crg07OwFHXdG/view?usp=sharing
 
-**ios version coming soon message**
+**ios version coming soon...**
 
 ### 1. Clone the Repository
 ```bash

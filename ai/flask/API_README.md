@@ -23,7 +23,7 @@ FIREBASE_SERVICE_ACCOUNT="c:/Users/anhng/Desktop/starbound/happy_hour_service_ac
 
 ```bash
 cd ai
-python api.py
+python server.py
 ```
 
 Server starts at: `http://localhost:5000`

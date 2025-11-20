@@ -13,7 +13,7 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend requests
 
-app.config["UPLOAD_FOLDER"] = "temp_uploads"
+app.config["UPLOAD_FOLDER"] = "/temp"
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
 
 # Allowed file extensions
@@ -145,9 +145,8 @@ def upload_menu():
         return jsonify(
             {
                 "success": True,
-                "document_id": doc_id,
                 "data": uploaded_data,
-                "message": "Menu uploaded and processed successfully",
+                "message": "Deals uploaded and processed successfully",
             }
         ), 200
 

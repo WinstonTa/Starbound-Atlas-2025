@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import VenueForm from '../components/VenueForm';
 
 // Deployed API URL using vercel
-const API_URL = "https://happymapper.vercel.app"
+const API_URL = "https://happymapper.vercel.app";
 export default function UploadMenuScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);

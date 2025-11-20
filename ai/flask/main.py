@@ -145,6 +145,7 @@ def upload_menu():
         return jsonify(
             {
                 "success": True,
+                "document_id": doc_id,
                 "data": uploaded_data,
                 "message": "Deals uploaded and processed successfully",
             }

@@ -8,7 +8,7 @@ import json
 import base64
 from dotenv import load_dotenv
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage
 from datetime import datetime
 from vision_parser import VisionMenuParser
 
@@ -44,7 +44,10 @@ class FirebaseUploader:
         cred = credentials.Certificate(sa_dict)
 
         if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
+            # Initialize with storage bucket
+            firebase_admin.initialize_app(cred, {
+                'storageBucket': sa_dict.get('project_id') + '.appspot.com'
+            })
             print("[OK] Firebase initialized")
         else:
             print("[OK] Using existing Firebase connection")
@@ -52,8 +55,36 @@ class FirebaseUploader:
         self.db = firestore.client()
         print("[OK] Connected to Firestore")
 
+        self.bucket = storage.bucket()
+        print("[OK] Connected to Firebase Storage")
+
         # Initialize Vision parser
         self.parser = VisionMenuParser()
+
+    def upload_image_to_storage(self, image_path, folder="menu_images"):
+        """Upload image to Firebase Storage and return public URL."""
+        try:
+            # Generate unique filename
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            filename = os.path.basename(image_path)
+            blob_name = f"{folder}/{timestamp}_{filename}"
+
+            # Upload to Firebase Storage
+            blob = self.bucket.blob(blob_name)
+            blob.upload_from_filename(image_path)
+
+            # Make the blob publicly accessible
+            blob.make_public()
+
+            # Get public URL
+            public_url = blob.public_url
+            print(f"[OK] Uploaded image to Storage: {blob_name}")
+            print(f"[OK] Public URL: {public_url}")
+
+            return public_url
+        except Exception as e:
+            print(f"[ERROR] Failed to upload image to Storage: {e}")
+            return None
 
     def upload_menu(self, image_path, collection="final_schema"):
         """Extract menu data via Gemini and upload to Firestore."""
@@ -61,12 +92,19 @@ class FirebaseUploader:
         print(f"Processing: {image_path}")
         print(f"{'=' * 70}\n")
 
+        # Upload image to Firebase Storage
+        image_url = self.upload_image_to_storage(image_path)
+
         data = self.parser.parse_menu(image_path)
         data["metadata"] = {
             "uploaded_at": datetime.utcnow().isoformat(),
             "image_filename": os.path.basename(image_path),
             "extraction_method": "gemini_vision",
         }
+
+        # Add image URL to data
+        if image_url:
+            data["image_url"] = image_url
 
         print(f"\n{'=' * 70}")
         print("Uploading to Firestore...")

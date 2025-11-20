@@ -23,12 +23,15 @@ GoogleSignin.configure({
   webClientId: '122197808815-hbnkec1t6hi9og08blonscociahij130.apps.googleusercontent.com',
 });
 
-export default function LoginScreen() {
+export default function SignUpScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [celebration, setCelebrationState] = useState<{
     visible: boolean;
     title: string;
@@ -54,31 +57,54 @@ export default function LoginScreen() {
     ]).start();
   }, []);
 
-  const saveUserToFirestore = async (user: any) => {
+  // Password requirements status
+  const getPasswordRequirements = (password: string) => {
+    return {
+      length: password.length >= 8,
+      capital: /[A-Z]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    };
+  };
+
+  const requirements = getPasswordRequirements(password);
+
+  const saveUserToFirestore = async (user: any, customDisplayName?: string) => {
     try {
+      if (!user || !user.uid) {
+        console.error('Invalid user object:', user);
+        throw new Error('Invalid user object');
+      }
+
       const userRef = firestore().collection('user_data').doc(user.uid);
 
-      // Use set with merge to create or update the document
-      await userRef.set({
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName || '',
-        photoURL: user.photoURL || '',
-        lastLoginAt: firestore.FieldValue.serverTimestamp(),
-        provider: user.providerData[0]?.providerId || 'unknown',
-      }, { merge: true });
-
-      // If this is a new user (no createdAt field), add it
-      const userDoc = await userRef.get();
-      if (!userDoc.data()?.createdAt) {
-        await userRef.set({
-          createdAt: firestore.FieldValue.serverTimestamp(),
-          addedDeals: [],
-          savedDeals: [],
-        }, { merge: true });
+      // Get provider info safely
+      let provider = 'email';
+      if (user.providerData && user.providerData.length > 0 && user.providerData[0]) {
+        provider = user.providerData[0].providerId || 'email';
       }
+
+      // Create complete user data object
+      const userData = {
+        uid: user.uid,
+        email: user.email || '',
+        displayName: customDisplayName || user.displayName || '',
+        photoURL: user.photoURL || '',
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        lastLoginAt: firestore.FieldValue.serverTimestamp(),
+        provider: provider,
+        addedDeals: [],
+        savedDeals: [],
+      };
+
+      console.log('Saving user data to Firestore:', userData);
+
+      // Use set to create the document
+      await userRef.set(userData, { merge: true });
+
+      console.log('User successfully saved to Firestore');
     } catch (error) {
       console.error('Error saving user to Firestore:', error);
+      throw error;
     }
   };
 
@@ -103,7 +129,7 @@ export default function LoginScreen() {
 
       await saveUserToFirestore(userCredential.user);
 
-      showCelebration('Cheers! 🍹', `Welcome aboard, ${userCredential.user.displayName || 'friend'}!`, '/map');
+      showCelebration('Cheers! 🎉', `Welcome to HappyMapper, ${userCredential.user.displayName || 'friend'}!`, '/map');
     } catch (error: any) {
       console.error('Google Sign-In Error:', error);
 
@@ -121,46 +147,96 @@ export default function LoginScreen() {
     }
   };
 
-  const handleLogin = async () => {
-    // Trim inputs
+  const validatePassword = (password: string): { valid: boolean; message: string } => {
+    if (password.length < 8) {
+      return {
+        valid: false,
+        message: 'Password must be at least 8 characters long',
+      };
+    }
+
+    // Check for at least one uppercase letter
+    if (!/[A-Z]/.test(password)) {
+      return {
+        valid: false,
+        message: 'Password must contain at least one capital letter',
+      };
+    }
+
+    // Check for at least one special character
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return {
+        valid: false,
+        message: 'Password must contain at least one special character (!@#$%^&*...)',
+      };
+    }
+
+    return { valid: true, message: '' };
+  };
+
+  const handleSignUp = async () => {
+    // Trim all inputs
     const trimmedEmail = email.trim();
+    const trimmedDisplayName = displayName.trim();
 
     // Validation
-    if (!trimmedEmail || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+    if (!trimmedEmail || !password || !confirmPassword || !trimmedDisplayName) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      Alert.alert('Weak Password', passwordValidation.message);
       return;
     }
 
     setIsLoading(true);
     try {
-      // Sign in with Firebase Auth
-      const userCredential = await auth().signInWithEmailAndPassword(trimmedEmail, password);
+      // Create user with email and password
+      const userCredential = await auth().createUserWithEmailAndPassword(trimmedEmail, password);
 
-      console.log('User signed in:', userCredential.user.uid);
+      console.log('User created with Firebase Auth:', userCredential.user.uid);
 
-      // Update last login time in Firestore
-      await saveUserToFirestore(userCredential.user);
+      // Update display name in Firebase Auth
+      await userCredential.user.updateProfile({
+        displayName: trimmedDisplayName,
+      });
 
-      showCelebration('Cheers! 🍻', `Great to see you again, ${userCredential.user.displayName || 'friend'}!`, '/map');
+      console.log('Display name updated in Firebase Auth');
+
+      // Save to Firestore with custom display name
+      await saveUserToFirestore(userCredential.user, trimmedDisplayName);
+
+      // Clear form fields
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setDisplayName('');
+      setPasswordFocused(false);
+
+      showCelebration('Cheers! 🥂', `Welcome to HappyMapper, ${trimmedDisplayName}!`, '/map');
     } catch (error: any) {
-      console.error('Login Error:', error);
+      console.error('Sign-Up Error:', error);
 
-      let errorMessage = 'Failed to sign in. Please try again.';
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email. Please sign up first.';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password. Please try again.';
+      let errorMessage = 'Failed to create account. Please try again.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Please sign in instead.';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Invalid email address.';
-      } else if (error.code === 'auth/user-disabled') {
-        errorMessage = 'This account has been disabled.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many failed attempts. Please try again later.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please use a stronger password.';
       } else if (error.message) {
         errorMessage = error.message;
       }
 
-      Alert.alert('Login Failed', errorMessage);
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -193,7 +269,20 @@ export default function LoginScreen() {
         {/* Logo/Header */}
         <View style={styles.header}>
           <Text style={styles.logo}>happy{'\n'}mapper</Text>
-          <Text style={styles.subtitle}>Find deals all day, every day</Text>
+          <Text style={styles.subtitle}>Create your account</Text>
+        </View>
+
+        {/* Display Name Input */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Full Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="John Doe"
+            placeholderTextColor="#A67B5B"
+            autoCapitalize="words"
+            value={displayName}
+            onChangeText={setDisplayName}
+          />
         </View>
 
         {/* Email Input */}
@@ -215,25 +304,69 @@ export default function LoginScreen() {
           <Text style={styles.inputLabel}>Password</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter your password"
+            placeholder="Enter password"
             placeholderTextColor="#A67B5B"
             secureTextEntry
             autoCapitalize="none"
             value={password}
             onChangeText={setPassword}
+            onFocus={() => setPasswordFocused(true)}
+            onBlur={() => setPasswordFocused(false)}
+          />
+          {(passwordFocused || password.length > 0) && (
+            <View style={styles.requirementsContainer}>
+              <View style={styles.requirementRow}>
+                <Text style={requirements.length ? styles.checkMark : styles.checkMarkEmpty}>
+                  {requirements.length ? '✓' : '○'}
+                </Text>
+                <Text style={requirements.length ? styles.requirementTextMet : styles.requirementText}>
+                  At least 8 characters
+                </Text>
+              </View>
+              <View style={styles.requirementRow}>
+                <Text style={requirements.capital ? styles.checkMark : styles.checkMarkEmpty}>
+                  {requirements.capital ? '✓' : '○'}
+                </Text>
+                <Text style={requirements.capital ? styles.requirementTextMet : styles.requirementText}>
+                  One capital letter
+                </Text>
+              </View>
+              <View style={styles.requirementRow}>
+                <Text style={requirements.special ? styles.checkMark : styles.checkMarkEmpty}>
+                  {requirements.special ? '✓' : '○'}
+                </Text>
+                <Text style={requirements.special ? styles.requirementTextMet : styles.requirementText}>
+                  One special character (!@#$...)
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Confirm Password Input */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Confirm Password</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Re-enter your password"
+            placeholderTextColor="#A67B5B"
+            secureTextEntry
+            autoCapitalize="none"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
           />
         </View>
 
-        {/* Login Button */}
+        {/* Sign Up Button */}
         <TouchableOpacity
-          style={styles.loginButton}
-          onPress={handleLogin}
+          style={styles.signUpButton}
+          onPress={handleSignUp}
           disabled={isLoading}
         >
           {isLoading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.loginButtonText}>Sign In</Text>
+            <Text style={styles.signUpButtonText}>Create Account</Text>
           )}
         </TouchableOpacity>
 
@@ -260,11 +393,11 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
-        {/* Sign Up Link */}
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/signup')}>
-            <Text style={styles.signUpLink}>Sign Up</Text>
+        {/* Sign In Link */}
+        <View style={styles.signInContainer}>
+          <Text style={styles.signInText}>Already have an account? </Text>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.signInLink}>Sign In</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -292,7 +425,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 50,
+    marginBottom: 40,
   },
   logo: {
     fontSize: 48,
@@ -308,7 +441,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   inputLabel: {
     fontSize: 14,
@@ -326,14 +459,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E8D5C4',
   },
-  loginButton: {
+  signUpButton: {
     backgroundColor: '#E8886B',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 10,
   },
-  loginButtonText: {
+  signUpButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
@@ -341,7 +474,7 @@ const styles = StyleSheet.create({
   separatorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 30,
+    marginVertical: 25,
   },
   separatorLine: {
     flex: 1,
@@ -376,18 +509,47 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  signUpContainer: {
+  signInContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 30,
+    marginTop: 25,
   },
-  signUpText: {
+  signInText: {
     color: '#A67B5B',
     fontSize: 16,
   },
-  signUpLink: {
+  signInLink: {
     color: '#E8886B',
     fontSize: 16,
     fontWeight: '700',
+  },
+  requirementsContainer: {
+    marginTop: 8,
+    paddingLeft: 4,
+  },
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  checkMark: {
+    fontSize: 14,
+    color: '#4CAF50',
+    marginRight: 6,
+    fontWeight: 'bold',
+  },
+  checkMarkEmpty: {
+    fontSize: 14,
+    color: '#A67B5B',
+    marginRight: 6,
+  },
+  requirementText: {
+    fontSize: 12,
+    color: '#A67B5B',
+  },
+  requirementTextMet: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '500',
   },
 });

@@ -1,6 +1,7 @@
 // app/list.tsx
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View, Animated } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { watchAllVenuesWithDeals, type FrontendVenueWithDeals } from '../src/get_venues';
 import { probeFinalSchema } from '../src/health';
 import ListBox from '../components/ListBox';
@@ -9,6 +10,7 @@ export default function ListScreen() {
   const [venues, setVenues] = useState<FrontendVenueWithDeals[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
 
   // test connectivity with firebase
@@ -42,11 +44,23 @@ export default function ListScreen() {
   }, []);
 
 
+  useFocusEffect(
+    useCallback(() => {
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      return () => fadeAnim.stopAnimation();
+    }, [fadeAnim])
+  );
+
   if (loading) return <ActivityIndicator style={{ marginTop: 40 }} />;
   if (err) return <Text style={{ margin: 16 }}>Error: {err}</Text>;
 
   return (
-    <View style={styles.wrapper}>
+    <Animated.View style={[styles.wrapper, { opacity: fadeAnim }]}>
       <View style={styles.header}>
         <Text style={styles.headerText}>HappyMapper</Text>
       </View>
@@ -59,7 +73,7 @@ export default function ListScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -73,8 +87,8 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 24,
-    fontWeight: '400',
-    color: '#E8886B',
+    fontWeight: '500',
+    color: '#D6453B',
     letterSpacing: 1,
   },
   container: { flex: 1, alignItems: 'center', backgroundColor: '#F4EAE1' },

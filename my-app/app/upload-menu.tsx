@@ -6,9 +6,8 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import { useFocusEffect } from '@react-navigation/native';
 
-// FOR DEVELOPMENT USE YOUR OWN IP HERE
-const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'http://192.168.68.115:5000';
-
+// Deployed API URL using vercel
+const API_URL = "https://happymapper.vercel.app"
 export default function UploadMenuScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);

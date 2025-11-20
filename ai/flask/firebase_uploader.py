@@ -44,10 +44,10 @@ class FirebaseUploader:
         cred = credentials.Certificate(sa_dict)
 
         if not firebase_admin._apps:
-            # Initialize with storage bucket
-            firebase_admin.initialize_app(cred, {
-                'storageBucket': sa_dict.get('project_id') + '.appspot.com'
-            })
+            # Initialize with storage bucket, points to bucket gs://
+            firebase_admin.initialize_app(
+                cred, {"storageBucket": "happy-hour-mvp.firebasestorage.app"}
+            )
             print("[OK] Firebase initialized")
         else:
             print("[OK] Using existing Firebase connection")

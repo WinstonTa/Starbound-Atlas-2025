@@ -20,3 +20,8 @@ package-lock.json
 VENUE_FORM_GUIDE.md
 
 node_modules/
+
+# Service account credentials (sensitive)
+paddle_ocr/happy_hour_service_account.json
+**/service_account.json
+**/*_service_account.json

@@ -13,7 +13,7 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend requests
 
-app.config["UPLOAD_FOLDER"] = "/temp"
+app.config["UPLOAD_FOLDER"] = "/tmp"  # has to be "/tmp"
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
 
 # Allowed file extensions

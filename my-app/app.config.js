@@ -44,7 +44,6 @@ export default {
     ],
     experiments: { typedRoutes: true, reactCompiler: true },
     extra: {
-      apiBaseUrl: 'http://192.168.1.20:5000',
       router: {},
       eas: { projectId: 'c2fd428d-835a-4f18-a590-8389062c3fd3' },
     },

@@ -28,7 +28,7 @@ Happy Mapper helps users find nearby bars and restaurants offering happy hour sp
 ---
 
 ## 🛠️ Installation
-**Android APK (ur apk isn't harmful so don't worry)**
+**Android APK (our apk isn't harmful so don't worry)**
 
 https://drive.google.com/file/d/1XkuNGqqg6zEVLzDwxyK_crg07OwFHXdG/view?usp=drive_link
 

@@ -1,16 +1,22 @@
 import { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import auth from '@react-native-firebase/auth';
 
 export default function StartupScreen() {
   const router = useRouter();
 
+  // if the user is logged in, go straight to the /map screen
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace('/login');
-    }, 4500);
+    const unsubscribe = auth().onAuthStateChanged(user => {
+      if (user) {
+        router.replace('/map');
+      } else {
+        router.replace('/login');
+      }
+    });
 
-    return () => clearTimeout(timer);
+    return unsubscribe;
   }, [router]);
 
   return (

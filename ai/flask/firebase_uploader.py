@@ -45,6 +45,7 @@ class FirebaseUploader:
 
         if not firebase_admin._apps:
             # Initialize with storage bucket, points to bucket gs://
+            # TODO: HARDCODED, HIDE IT LATER LMAO
             firebase_admin.initialize_app(
                 cred, {"storageBucket": "happy-hour-mvp.firebasestorage.app"}
             )

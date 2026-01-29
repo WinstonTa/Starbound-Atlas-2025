@@ -3,12 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Modal, Pressable } fro
 import { Ionicons } from '@expo/vector-icons';
 import type { FrontendVenueWithDeals } from '../src/get_venues';
 
-type Props = {
-  venue: FrontendVenueWithDeals;
-  isFavorited?: boolean;
-  onToggleFavorite?: (venueId: string) => void;
-};
-
+type Props = { venue: FrontendVenueWithDeals };
 function formatAddr(addr: FrontendVenueWithDeals['address']): string {
   if (!addr) return '';
   if (typeof addr === 'string') return addr;

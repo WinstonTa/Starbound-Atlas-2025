@@ -20,8 +20,8 @@
       "package": "com.happymapper.app",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "minSdkVersion": 23,
-      "googleServicesFile": "./google-services.json",
+      "minSdkVersion": 27,
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",

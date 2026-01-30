@@ -11,7 +11,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.happymapper.app',
-      googleServicesFile: process.env.GOOGLE_SERVICE_INFO_PLIST, // file env var path
+      googleServicesFile: "./GoogleService-Info.plist", // file env var path
       infoPlist: { ITSAppUsesNonExemptEncryption: false },
       config: {
         googleMapsApiKey: process.env.IOS_GOOGLE_MAPS_KEY, // optional env
@@ -21,8 +21,8 @@ export default {
       package: 'com.happymapper.app',
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
-      minSdkVersion: 23,
-      googleServicesFile: process.env.GOOGLE_SERVICES_JSON, // file env var path
+      minSdkVersion: 27,
+      googleServicesFile: "./google-services.json", // file env var path
       config: {
         googleMaps: { apiKey: process.env.ANDROID_GOOGLE_MAPS_KEY }, // optional env
       },

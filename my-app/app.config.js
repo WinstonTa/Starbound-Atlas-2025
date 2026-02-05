@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 export default {
   expo: {
     name: 'happymapper',
@@ -22,9 +24,9 @@ export default {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       minSdkVersion: 27,
-      googleServicesFile: "./google-services.json", // file env var path
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON_TEST, // file env var path
       config: {
-        googleMaps: { apiKey: process.env.ANDROID_GOOGLE_MAPS_KEY }, // optional env
+        googleMaps: { apiKey: process.env.ANDROID_GOOGLE_MAPS_KEY_TEST }, // optional env
       },
     },
     web: { output: 'static', favicon: './assets/images/favicon.png' },
@@ -38,7 +40,7 @@ export default {
         dark: { backgroundColor: '#000000' },
       }],
       ['@react-native-firebase/app', {
-        androidGoogleServicesFile: process.env.GOOGLE_SERVICES_JSON,
+        androidGoogleServicesFile: process.env.GOOGLE_SERVICES_JSON_TEST,
         iosGoogleServicesFile: process.env.GOOGLE_SERVICE_INFO_PLIST,
       }],
     ],

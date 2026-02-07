@@ -2,6 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, Button } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+/**
+ * A placeholder main screen for after the user logs in.
+ * In a real app, this could be a tab navigator or a drawer navigator.
+ * 
+ * The `onLogout` prop would be passed down from your navigation setup
+ * to allow the user to sign out.
+ */
 const MainScreen = ({ onLogout }: { onLogout: () => void }) => {
   return (
     <SafeAreaView style={styles.safeArea}>

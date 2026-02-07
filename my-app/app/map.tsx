@@ -1,8 +1,10 @@
-import { useEffect, useState, useRef } from 'react';
-import { StyleSheet, View, ActivityIndicator, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { StyleSheet, View, ActivityIndicator, Text, TextInput, TouchableOpacity, Platform, Dimensions, Animated, PanResponder, FlatList, Keyboard } from 'react-native';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 
 // Minimal local types
 type Deal = {
@@ -23,33 +25,175 @@ type Venue = {
   deals?: Deal[];
 };
 
+const DEFAULT_REGION = {
+  latitude: 34.0522,
+  longitude: -118.2437,
+  latitudeDelta: 0.08,
+  longitudeDelta: 0.08,
+};
+
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const [region, setRegion] = useState<{ latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number } | null>(null);
+  const [region, setRegion] = useState<{ latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number } | null>(DEFAULT_REGION);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [query, setQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [sortKey, setSortKey] = useState<'distance'>('distance');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sheetState, setSheetState] = useState<'open' | 'peek' | 'hidden'>('peek');
+  const [maxDistanceMi, setMaxDistanceMi] = useState<number>(10);
+  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const geocodeCache = useRef<Record<string, { latitude: number; longitude: number }>>({});
   const unsubRef = useRef<() => void | null>(null);
   const mapRef = useRef<any>(null);
   const markerRefs = useRef<Record<string, any>>({});
+  const sliderTrackWidth = useRef(0);
+  const sliderTrackRef = useRef<any>(null);
+  const sliderX = useRef(new Animated.Value(0)).current;
+  const { height: screenHeight } = Dimensions.get('window');
+  const sheetHeight = Math.min(screenHeight * 0.72, 560);
+  const peekHeight = 200 + insets.bottom;
+  const hiddenPeek = 24 + insets.bottom;
+  const peekTranslate = Math.max(0, sheetHeight - peekHeight);
+  const hiddenTranslate = Math.max(0, sheetHeight - hiddenPeek);
+  const translateY = useRef(new Animated.Value(peekTranslate)).current;
+  const dragStartY = useRef(peekTranslate);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 6,
+      onPanResponderGrant: () => {
+        translateY.stopAnimation((v: number) => {
+          dragStartY.current = v;
+        });
+      },
+      onPanResponderMove: (_, gesture) => {
+        const next = Math.min(hiddenTranslate, Math.max(0, dragStartY.current + gesture.dy));
+        translateY.setValue(next);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        const next = Math.min(hiddenTranslate, Math.max(0, dragStartY.current + gesture.dy));
+        const snapPoints = [0, peekTranslate, hiddenTranslate];
+        const closest = snapPoints.reduce((prev, curr) => (Math.abs(curr - next) < Math.abs(prev - next) ? curr : prev));
+        setSheetState(closest === 0 ? 'open' : closest === hiddenTranslate ? 'hidden' : 'peek');
+        Animated.spring(translateY, {
+          toValue: closest,
+          useNativeDriver: true,
+          tension: 120,
+          friction: 14,
+        }).start();
+      },
+    })
+  ).current;
+
+  const sliderPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 2,
+      onPanResponderMove: (_, gesture) => {
+        if (!sliderTrackWidth.current) return;
+        const maxX = Math.max(1, sliderTrackWidth.current - sliderThumbSize);
+        const nextX = Math.min(maxX, Math.max(0, gesture.moveX - sliderTrackLeft.current));
+        sliderX.setValue(nextX);
+        const value = sliderValueFromX(nextX);
+        setMaxDistanceMi(value);
+      },
+      onPanResponderGrant: (_, gesture) => {
+        if (!sliderTrackWidth.current) return;
+        const maxX = Math.max(1, sliderTrackWidth.current - sliderThumbSize);
+        const nextX = Math.min(maxX, Math.max(0, gesture.x0 - sliderTrackLeft.current));
+        sliderX.setValue(nextX);
+        const value = sliderValueFromX(nextX);
+        setMaxDistanceMi(value);
+      },
+    })
+  ).current;
+
+  const sliderTrackLeft = useRef(0);
+  const sliderMin = 1;
+  const sliderMax = 100;
+  const sliderUnlimitedThreshold = 0.98;
+  const sliderThumbSize = 26;
+  const sliderValueFromX = (x: number) => {
+    if (!sliderTrackWidth.current) return maxDistanceMi;
+    const maxX = Math.max(1, sliderTrackWidth.current - sliderThumbSize);
+    const ratio = x / maxX;
+    if (ratio >= sliderUnlimitedThreshold) return Number.POSITIVE_INFINITY;
+    const clampedRatio = Math.min(1, Math.max(0, ratio / sliderUnlimitedThreshold));
+    return Math.round(sliderMin + clampedRatio * (sliderMax - sliderMin));
+  };
+  const sliderXFromValue = (value: number) => {
+    if (!sliderTrackWidth.current) return 0;
+    const maxX = Math.max(1, sliderTrackWidth.current - sliderThumbSize);
+    if (!Number.isFinite(value)) return maxX;
+    const ratio = (value - sliderMin) / (sliderMax - sliderMin);
+    return Math.min(
+      maxX * sliderUnlimitedThreshold,
+      Math.max(0, ratio * maxX * sliderUnlimitedThreshold)
+    );
+  };
+
+  const suggestions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const seen = new Set<string>();
+    const results: { title: string; subtitle: string; venue: Venue }[] = [];
+    for (const v of venues) {
+      const name = (v.venue_name ?? '').trim();
+      const addr = formatAddress(v.address).trim();
+      if (!name) continue;
+      const matches = name.toLowerCase().includes(q) || addr.toLowerCase().includes(q);
+      if (matches && !seen.has(v.venue_id)) {
+        seen.add(v.venue_id);
+        results.push({ title: name, subtitle: addr, venue: v });
+      }
+      if (results.length >= 6) break;
+    }
+    return results;
+  }, [query, venues]);
 
   // user location
   useEffect(() => {
+    let sub: Location.LocationSubscription | null = null;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Permission to access location was denied');
-        return;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Permission to access location was denied');
+          setRegion(prev => prev ?? DEFAULT_REGION);
+          return;
+        }
+        const loc = await Location.getCurrentPositionAsync({});
+        setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+        const r = {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        setRegion(r);
+        sub = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 25,
+            timeInterval: 5000,
+          },
+          (position) => {
+            setUserLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          }
+        );
+      } catch (e) {
+        console.warn('Current location unavailable', e);
+        setRegion(prev => prev ?? DEFAULT_REGION);
       }
-      const loc = await Location.getCurrentPositionAsync({});
-      const r = {
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-      setRegion(r);
     })();
+    return () => {
+      try { sub?.remove(); } catch {}
+    };
   }, []);
 
   // load venues (dynamic import to avoid native crash in Expo Go)
@@ -131,6 +275,48 @@ export default function MapScreen() {
     return parts.join('\n');
   }
 
+  function getCoords(v: Venue) {
+    const cached = geocodeCache.current[v.venue_id];
+    const lat = v.latitude ?? cached?.latitude;
+    const lng = v.longitude ?? cached?.longitude;
+    if (lat == null || lng == null) return null;
+    return { latitude: lat, longitude: lng };
+  }
+
+  function haversineDistance(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) {
+    const toRad = (x: number) => (x * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(b.latitude - a.latitude);
+    const dLon = toRad(b.longitude - a.longitude);
+    const lat1 = toRad(a.latitude);
+    const lat2 = toRad(b.latitude);
+    const h =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const km = 2 * R * Math.asin(Math.sqrt(h));
+    return km * 0.621371;
+  }
+
+  const nearbyVenues = useMemo(() => {
+    if (!region && !userLocation) return [];
+    const origin = userLocation ?? { latitude: region!.latitude, longitude: region!.longitude };
+    const withDistance = venues
+      .map(v => {
+        const coords = getCoords(v);
+        if (!coords) return null;
+        const distanceMi = haversineDistance(origin, coords);
+        return { venue: v, coords, distanceMi };
+      })
+      .filter(Boolean);
+
+    return withDistance
+      .filter((item: any) => !Number.isFinite(maxDistanceMi) || item.distanceMi <= maxDistanceMi)
+      .sort((a: any, b: any) => {
+        const delta = a.distanceMi - b.distanceMi;
+        return sortOrder === 'asc' ? delta : -delta;
+      });
+  }, [venues, region, sortKey, maxDistanceMi, sortOrder]);
+
   async function handleSearchSubmit() {
     const q = query.trim();
     if (!q) return;
@@ -169,6 +355,8 @@ export default function MapScreen() {
           try { mapRef.current?.animateToRegion(r, 500); } catch {}
         }
       }
+      setShowSuggestions(false);
+      Keyboard.dismiss();
       return;
     }
 
@@ -182,6 +370,8 @@ export default function MapScreen() {
       } else {
         console.log('No geocode result for query:', q);
       }
+      setShowSuggestions(false);
+      Keyboard.dismiss();
     } catch (e) {
       console.warn('Geocode failed for query', q, e);
     }
@@ -204,15 +394,13 @@ export default function MapScreen() {
         region={region}
         showsUserLocation
         followsUserLocation
-        showsMyLocationButton
+        showsMyLocationButton={false}
       >
         <Marker coordinate={region} title="You Are Here" />
 
         {venues.map(v => {
-          const cached = geocodeCache.current[v.venue_id];
-          const lat = v.latitude ?? cached?.latitude;
-          const lng = v.longitude ?? cached?.longitude;
-          if (lat == null || lng == null) return null;
+          const coords = getCoords(v);
+          if (!coords) return null;
 
           const addressText = formatAddress(v.address);
           const dealText = formatFirstDeal(v.deals);
@@ -222,7 +410,7 @@ export default function MapScreen() {
             <Marker
               key={v.venue_id}
               ref={ref => { markerRefs.current[v.venue_id] = ref; }}
-              coordinate={{ latitude: lat, longitude: lng }}
+              coordinate={coords}
               title={v.venue_name ?? 'Venue'}
               // Use default Android info window; custom callout on iOS
               description={Platform.OS === 'android' ? (calloutText || 'No address or deal info available') : undefined}
@@ -255,18 +443,233 @@ export default function MapScreen() {
         <TextInput
           placeholder="Search city, venue, or address (e.g. Long Beach)"
           value={query}
-          onChangeText={setQuery}
+          onChangeText={(text) => {
+            setQuery(text);
+            setShowSuggestions(text.trim().length > 0);
+          }}
           onSubmitEditing={handleSearchSubmit}
           returnKeyType="search"
           style={styles.searchInput}
           clearButtonMode="while-editing"
           accessible={true}
           importantForAutofill="yes"
+          onFocus={() => setShowSuggestions(query.trim().length > 0)}
         />
         <TouchableOpacity style={styles.searchButton} onPress={handleSearchSubmit} accessibilityLabel="Search">
           <Text style={{ color: '#fff', fontWeight: '700' }}>Search</Text>
         </TouchableOpacity>
       </View>
+      {showSuggestions && suggestions.length > 0 && (
+        <View style={[styles.suggestionBox, { top: insets.top + 58 }]}>
+          {suggestions.map((s) => (
+            <TouchableOpacity
+              key={s.venue.venue_id}
+              style={styles.suggestionItem}
+              onPress={() => {
+                setQuery(s.title);
+                setShowSuggestions(false);
+                Keyboard.dismiss();
+                const coords = getCoords(s.venue);
+                if (coords) {
+                  const r = { latitude: coords.latitude, longitude: coords.longitude, latitudeDelta: 0.02, longitudeDelta: 0.02 };
+                  setRegion(r);
+                  try { mapRef.current?.animateToRegion(r, 500); } catch {}
+                } else {
+                  handleSearchSubmit();
+                }
+              }}
+            >
+              <Text style={styles.suggestionTitle} numberOfLines={1}>{s.title}</Text>
+              {s.subtitle ? (
+                <Text style={styles.suggestionSubtitle} numberOfLines={1}>{s.subtitle}</Text>
+              ) : null}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* Center user button (Google Maps-style) */}
+      <Animated.View
+        pointerEvents={sheetState === 'hidden' ? 'auto' : 'none'}
+        style={[
+          styles.centerButtonWrap,
+          {
+            opacity: sheetState === 'hidden' ? 1 : 0,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.centerButton}
+          onPress={async () => {
+            let coords = userLocation;
+            if (!coords) {
+              try {
+                const loc = await Location.getCurrentPositionAsync({});
+                coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+                setUserLocation(coords);
+              } catch (e) {
+                console.warn('Failed to get current location', e);
+              }
+            }
+            if (coords) {
+              const r = { latitude: coords.latitude, longitude: coords.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+              setRegion(r);
+              try { mapRef.current?.animateToRegion(r, 500); } catch {}
+            }
+          }}
+          accessibilityLabel="Center on your location"
+        >
+          <MaterialCommunityIcons name="crosshairs-gps" size={22} color="#1E1F24" />
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Draggable list overlay */}
+      <Animated.View
+        style={[
+          styles.sheet,
+          {
+            height: sheetHeight,
+            paddingBottom: 12 + insets.bottom,
+            transform: [{ translateY }],
+          },
+        ]}
+      >
+        <View style={styles.sheetHandleWrap} {...panResponder.panHandlers}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Nearby Restaurants</Text>
+            <View style={styles.sheetHeaderRight}>
+              <TouchableOpacity
+                style={styles.sortButton}
+                onPress={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
+              >
+                <Text style={styles.sortButtonText}>
+                  {sortOrder === 'asc' ? 'Closest' : 'Farthest'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.sheetSubtitle}>{nearbyVenues.length} places</Text>
+            </View>
+          </View>
+        </View>
+        {selectedVenue ? (
+          <View style={styles.detailCard}>
+            <View style={styles.detailHeader}>
+              <Text style={styles.detailTitle}>{selectedVenue.venue_name ?? 'Venue'}</Text>
+              <TouchableOpacity onPress={() => setSelectedVenue(null)}>
+                <Text style={styles.detailClose}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.detailAddress}>{formatAddress(selectedVenue.address) || 'No address available'}</Text>
+            {selectedVenue.deals && selectedVenue.deals.length > 0 ? (
+              <View style={styles.detailDeals}>
+                {selectedVenue.deals.map((d, idx) => (
+                  <View key={`${selectedVenue.venue_id}-deal-${idx}`} style={styles.detailDealItem}>
+                    <Text style={styles.detailDealName}>{d.name ?? 'Deal'}</Text>
+                    {d.description ? <Text style={styles.detailDealText}>{d.description}</Text> : null}
+                    {Array.isArray(d.days) && d.days.length > 0 ? (
+                      <Text style={styles.detailDealText}>{d.days.join(', ')}</Text>
+                    ) : null}
+                    {(d.start_time || d.end_time) ? (
+                      <Text style={styles.detailDealText}>
+                        {[d.start_time, d.end_time].filter(Boolean).join(' - ')}
+                      </Text>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.detailDealText}>No deals available</Text>
+            )}
+          </View>
+        ) : (
+          <FlatList
+            data={nearbyVenues}
+            keyExtractor={(item: any) => item.venue.venue_id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.sheetList}
+            ListHeaderComponent={
+              <View style={styles.filterRow}>
+                <View style={styles.filterChip}>
+                  <Text style={styles.filterLabel}>Distance</Text>
+                  <View
+                    ref={ref => { sliderTrackRef.current = ref; }}
+                    style={styles.sliderTrack}
+                    onLayout={event => {
+                      sliderTrackWidth.current = event.nativeEvent.layout.width;
+                      sliderTrackRef.current?.measureInWindow((x: number) => {
+                        sliderTrackLeft.current = x;
+                      });
+                      sliderX.setValue(sliderXFromValue(maxDistanceMi));
+                    }}
+                  >
+                    <Animated.View style={[styles.sliderFill, { width: sliderX }]} />
+                    <Animated.View
+                      style={[styles.sliderThumb, { transform: [{ translateX: sliderX }] }]}
+                      {...sliderPanResponder.panHandlers}
+                    />
+                  </View>
+                  <Text style={styles.filterValue}>
+                    {Number.isFinite(maxDistanceMi) ? `${Math.round(maxDistanceMi)} mi` : 'Unlimited'}
+                  </Text>
+                </View>
+              </View>
+            }
+            renderItem={({ item }: any) => {
+              const addressText = formatAddress(item.venue.address);
+              const dealText = formatFirstDeal(item.venue.deals);
+              return (
+                <TouchableOpacity
+                  style={styles.venueCard}
+                onPress={() => {
+                  setSelectedVenue(item.venue);
+                  setQuery('');
+                  setShowSuggestions(false);
+                  const r = {
+                    latitude: item.coords.latitude,
+                    longitude: item.coords.longitude,
+                    latitudeDelta: 0.02,
+                      longitudeDelta: 0.02,
+                    };
+                    setRegion(r);
+                    try { mapRef.current?.animateToRegion(r, 500); } catch {}
+                    if (Platform.OS === 'android') {
+                      requestAnimationFrame(() => {
+                        try { markerRefs.current[item.venue.venue_id]?.showCallout(); } catch {}
+                      });
+                    }
+                  }}
+                >
+                  <View style={styles.venueImageWrap}>
+                    {item.venue.image_url ? (
+                      <Image source={{ uri: item.venue.image_url }} style={styles.venueImage} contentFit="cover" />
+                    ) : (
+                      <View style={styles.venueImagePlaceholder}>
+                        <MaterialCommunityIcons name="image-off-outline" size={20} color="#9AA0AA" />
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.venueInfo}>
+                    <View style={styles.venueRow}>
+                      <Text style={styles.venueName} numberOfLines={1}>
+                        {item.venue.venue_name ?? 'Venue'}
+                      </Text>
+                      <Text style={styles.venueDistance}>{item.distanceMi.toFixed(1)} mi</Text>
+                    </View>
+                    <Text style={styles.venueAddress} numberOfLines={1}>
+                      {addressText || 'No address available'}
+                    </Text>
+                    {dealText ? (
+                      <Text style={styles.venueDeal} numberOfLines={2}>
+                        {dealText}
+                      </Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )}
+      </Animated.View>
     </View>
   );
 }
@@ -307,6 +710,268 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
+  },
+  suggestionBox: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E6E9EE',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 10,
+    zIndex: 998,
+  },
+  suggestionItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#EEF1F5',
+  },
+  suggestionTitle: {
+    fontSize: 13,
+    color: '#1E1F24',
+    fontWeight: '700',
+  },
+  suggestionSubtitle: {
+    marginTop: 2,
+    fontSize: 11,
+    color: '#6C7280',
+  },
+  centerButtonWrap: {
+    position: 'absolute',
+    right: 14,
+    top: '68%',
+    transform: [{ translateY: -22 }],
+    zIndex: 12,
+  },
+  centerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 18,
+  },
+  sheetHandleWrap: {
+    paddingTop: 12,
+    paddingBottom: 6,
+    alignItems: 'center',
+  },
+  sheetHandle: {
+    width: 64,
+    height: 7,
+    borderRadius: 999,
+    backgroundColor: '#B7BDC8',
+    marginBottom: 10,
+  },
+  sheetHeader: {
+    width: '100%',
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  sheetHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sortButton: {
+    backgroundColor: '#1E1F24',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  sortButtonText: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  sheetTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E1F24',
+  },
+  sheetSubtitle: {
+    fontSize: 12,
+    color: '#6C7280',
+  },
+  sheetList: {
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  filterRow: {
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+  },
+  filterChip: {
+    backgroundColor: '#F0F2F5',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    width: '100%',
+  },
+  filterLabel: {
+    fontSize: 12,
+    color: '#5C6270',
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  filterValue: {
+    fontSize: 12,
+    color: '#1E1F24',
+    marginTop: 6,
+    fontWeight: '600',
+  },
+  sliderTrack: {
+    height: 10,
+    backgroundColor: '#DCE0E6',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  sliderFill: {
+    height: 10,
+    backgroundColor: '#1E1F24',
+  },
+  sliderThumb: {
+    position: 'absolute',
+    top: -8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#1E1F24',
+  },
+  detailCard: {
+    marginHorizontal: 14,
+    marginBottom: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E6E9EE',
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E1F24',
+    flex: 1,
+    marginRight: 8,
+  },
+  detailClose: {
+    color: '#E8886B',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  detailAddress: {
+    fontSize: 12,
+    color: '#5C6270',
+    marginBottom: 8,
+  },
+  detailDeals: {
+    gap: 10,
+  },
+  detailDealItem: {
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#EEF1F5',
+  },
+  detailDealName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E1F24',
+    marginBottom: 2,
+  },
+  detailDealText: {
+    fontSize: 12,
+    color: '#5C6270',
+  },
+  venueCard: {
+    backgroundColor: '#F7F8FA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  venueImageWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#EEF1F5',
+  },
+  venueImage: {
+    width: '100%',
+    height: '100%',
+  },
+  venueImagePlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF1F5',
+  },
+  venueInfo: {
+    flex: 1,
+  },
+  venueRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  venueName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E1F24',
+    flex: 1,
+    marginRight: 8,
+  },
+  venueDistance: {
+    fontSize: 12,
+    color: '#9AA0AA',
+  },
+  venueAddress: {
+    fontSize: 12,
+    color: '#5C6270',
+  },
+  venueDeal: {
+    fontSize: 12,
+    color: '#2B2F36',
+    marginTop: 6,
   },
 });
 

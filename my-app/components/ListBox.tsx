@@ -26,7 +26,7 @@ function pickPrimaryDeal(deals?: FrontendDeal[]): { start?: string; end?: string
 
 const ListBox = memo(({ venue }: Props) => {
   const { height, width } = useWindowDimensions();
-  const cardHeight = Math.round(height * 0.15);
+  const cardHeight = Math.round(height * 0.12);
   const [modalVisible, setModalVisible] = useState(false);
 
   const addr = formatAddr(venue.address);
@@ -39,55 +39,56 @@ const ListBox = memo(({ venue }: Props) => {
 
   return (
     <>
-      <View style={[styles.card, { height: cardHeight, width: width - 24 }]}>
-        <TouchableOpacity onPress={() => setModalVisible(true)} activeOpacity={0.8}>
+      <View style={[styles.card, { minHeight: cardHeight, width: width - 24 }]}>
+        <TouchableOpacity activeOpacity={0.9} onPress={() => setModalVisible(true)}>
           <Image source={imageSource} style={styles.thumb} />
         </TouchableOpacity>
         <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={1}>
-          {String(venue.venue_name ?? 'Unnamed venue')}
-        </Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={1}>
+              {String(venue.venue_name ?? 'Unnamed venue')}
+            </Text>
+          </View>
 
-        {!!addr && (
-          <Text style={styles.addr} numberOfLines={1}>
-            {addr}
+          {!!addr && (
+            <Text style={styles.addr} numberOfLines={2}>
+              {addr}
+            </Text>
+          )}
+
+          {!!(start && end) && (
+            <Text style={styles.time} numberOfLines={1}>
+              {start} - {end}
+            </Text>
+          )}
+
+          <Text style={styles.desc} numberOfLines={3} ellipsizeMode="tail">
+            {title ?? 'No deals'}
+            {desc ? ` - ${desc}` : ''}
           </Text>
-        )}
 
-        {!!(start && end) && (
-          <Text style={styles.time} numberOfLines={1}>
-            {start} - {end}
-          </Text>
-        )}
-
-        <Text style={styles.desc} numberOfLines={2} ellipsizeMode="tail">
-          {title ?? 'No deals'}
-          {desc ? ` - ${desc}` : ''}
-        </Text>
+          {Array.isArray(venue.deals) && venue.deals.length > 1 && (
+            <View style={styles.dealsBlock}>
+              {venue.deals.slice(1, 4).map((d, idx) => (
+                <View key={`${venue.venue_id}-deal-${idx}`} style={styles.dealItem}>
+                  <Text style={styles.dealTitle}>{d.name ?? 'Deal'}</Text>
+                  {d.description ? <Text style={styles.dealText}>{d.description}</Text> : null}
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       </View>
-      </View>
-
-      {/* Full-screen image modal */}
       <Modal
         animationType="fade"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}
-        >
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
           <View style={styles.modalContent}>
-            <Image
-              source={imageSource}
-              style={styles.fullImage}
-              resizeMode="contain"
-            />
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
+            <Image source={imageSource} style={styles.fullImage} resizeMode="contain" />
+            <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -114,6 +115,12 @@ const styles = StyleSheet.create({
   },
   thumb: { width: 100, height: 100, borderRadius: 8, marginRight: 10 },
   content: { flex: 1, justifyContent: 'center' },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   title: { fontSize: 16, fontWeight: '700' },
   addr: { fontSize: 12, color: '#666', marginTop: 2 },
   time: { fontSize: 13, fontWeight: '600', marginTop: 4 },
@@ -131,8 +138,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fullImage: {
-    width: '90%',
-    height: '80%',
+    width: '92%',
+    height: '82%',
   },
   closeButton: {
     position: 'absolute',
@@ -150,6 +157,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  dealsBlock: {
+    gap: 6,
+  },
+  dealItem: {
+    borderTopWidth: 1,
+    borderTopColor: '#EEE',
+    paddingTop: 6,
+  },
+  dealTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  dealText: {
+    fontSize: 12,
+    color: '#555',
   },
 });
 

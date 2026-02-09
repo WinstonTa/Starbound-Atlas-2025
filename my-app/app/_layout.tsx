@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import firebase from '@react-native-firebase/app';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { FavoritesProvider } from '../src/favorites';
 
 // Initialize Firebase.
 // This should only be done once, at the root of your application.
@@ -21,6 +22,7 @@ export default function TabLayout() {
   const isSignUpScreen = pathname === '/signup';
 
   return (
+    <FavoritesProvider>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -61,7 +63,7 @@ export default function TabLayout() {
           tabBarLabel: 'Favorites',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'star' : 'star-outline'}
+              name={focused ? 'heart' : 'heart-outline'}
               size={26}
               color={color}
             />
@@ -120,5 +122,6 @@ export default function TabLayout() {
       />
 
     </Tabs>
+    </FavoritesProvider>
   );
 }

@@ -1,9 +1,10 @@
 // app/list.tsx
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View, Animated } from 'react-native';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View, Animated } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { watchAllVenuesWithDeals, type FrontendVenueWithDeals } from '../src/get_venues';
-import { probeFinalSchema } from '../src/health';
+import { useFavorites } from '../src/favorites';
+import { Ionicons } from '@expo/vector-icons';
 import ListBox from '../components/ListBox';
 
 export default function ListScreen() {
@@ -11,23 +12,7 @@ export default function ListScreen() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-
-
-  // test connectivity with firebase
-  async function probe() {
-    const res = await probeFinalSchema();
-    if (res.ok) {
-      Alert.alert('Firestore OK', `Query succeeded. Count: ${res.count}`);
-    } else {
-      Alert.alert('Firestore Error', `${res.code ?? 'unknown'}\n${res.reason ?? ''}`);
-    }
-  }
-  
-  // probe automatically on start, UNCOMMENT if you need to debug connectivity with firebase
-  // useEffect(() => {
-  //   probe();
-  // }, []);
-
+  const { savedVenueIds, toggleFavorite, isFavorited, loading: favLoading } = useFavorites();
 
   useEffect(() => {
     const unsub = watchAllVenuesWithDeals(
@@ -37,12 +22,11 @@ export default function ListScreen() {
       },
       (e) => {
         setErr(e?.code ? `${e.code}: ${e.message}` : String(e));
-        setLoading(false);          // turn off loading
+        setLoading(false);
       }
     );
     return unsub;
   }, []);
-
 
   useFocusEffect(
     useCallback(() => {
@@ -56,23 +40,44 @@ export default function ListScreen() {
     }, [fadeAnim])
   );
 
-  if (loading) return <ActivityIndicator style={{ marginTop: 40 }} />;
+  const favoriteVenues = useMemo(
+    () => venues.filter((v) => savedVenueIds.has(v.venue_id)),
+    [venues, savedVenueIds]
+  );
+
+  if (loading || favLoading) return <ActivityIndicator style={{ marginTop: 40 }} />;
   if (err) return <Text style={{ margin: 16 }}>Error: {err}</Text>;
 
   return (
     <Animated.View style={[styles.wrapper, { opacity: fadeAnim }]}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>HappyMapper</Text>
+        <Text style={styles.headerText}>Saved Deals</Text>
+        <Text style={styles.headerSubtext}>{favoriteVenues.length} favorites</Text>
       </View>
-      <ScrollView>
-        <View style={styles.container}>
-          <View style={styles.listContainer}>
-            {venues.map((venue, index) => (
-              <ListBox key={String(venue.venue_id ?? index)} venue={venue} />
-            ))}
-          </View>
+
+      {favoriteVenues.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="heart-outline" size={56} color="#D4A08B" />
+          <Text style={styles.emptyTitle}>No saved deals yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Tap the heart icon on any venue to save it here
+          </Text>
         </View>
-      </ScrollView>
+      ) : (
+        <FlatList
+          data={favoriteVenues}
+          keyExtractor={(item) => item.venue_id}
+          renderItem={({ item }) => (
+            <ListBox
+              venue={item}
+              isFavorited={isFavorited(item.venue_id)}
+              onToggleFavorite={toggleFavorite}
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </Animated.View>
   );
 }
@@ -81,17 +86,41 @@ const styles = StyleSheet.create({
   wrapper: { flex: 1, backgroundColor: '#F5EBE0' },
   header: {
     backgroundColor: '#F5EBE0',
-    paddingTop: 50,
-    paddingBottom: 15,
-    alignItems: 'center',
+    paddingTop: 54,
+    paddingBottom: 12,
+    paddingHorizontal: 20,
   },
   headerText: {
-    fontSize: 24,
-    fontWeight: '500',
-    color: '#D6453B',
-    letterSpacing: 1,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1E1F24',
   },
-  container: { flex: 1, alignItems: 'center', backgroundColor: '#F4EAE1' },
-  listContainer: { marginTop: 40, margin: 20 },
+  headerSubtext: {
+    fontSize: 13,
+    color: '#6C7280',
+    marginTop: 2,
+  },
+  listContent: {
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E1F24',
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#6C7280',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
 });
-

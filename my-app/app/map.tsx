@@ -3,8 +3,9 @@ import { StyleSheet, View, ActivityIndicator, Text, TextInput, TouchableOpacity,
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useFavorites } from '../src/favorites';
 
 // Minimal local types
 type Deal = {
@@ -34,6 +35,7 @@ const DEFAULT_REGION = {
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
+  const { toggleFavorite, isFavorited } = useFavorites();
   const [region, setRegion] = useState<{ latitude: number; longitude: number; latitudeDelta: number; longitudeDelta: number } | null>(DEFAULT_REGION);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -555,9 +557,18 @@ export default function MapScreen() {
           <View style={styles.detailCard}>
             <View style={styles.detailHeader}>
               <Text style={styles.detailTitle}>{selectedVenue.venue_name ?? 'Venue'}</Text>
-              <TouchableOpacity onPress={() => setSelectedVenue(null)}>
-                <Text style={styles.detailClose}>Close</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <TouchableOpacity onPress={() => toggleFavorite(selectedVenue.venue_id)}>
+                  <Ionicons
+                    name={isFavorited(selectedVenue.venue_id) ? 'heart' : 'heart-outline'}
+                    size={22}
+                    color={isFavorited(selectedVenue.venue_id) ? '#E8886B' : '#B7BDC8'}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setSelectedVenue(null)}>
+                  <Text style={styles.detailClose}>Close</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <Text style={styles.detailAddress}>{formatAddress(selectedVenue.address) || 'No address available'}</Text>
             {selectedVenue.deals && selectedVenue.deals.length > 0 ? (
@@ -653,6 +664,17 @@ export default function MapScreen() {
                       <Text style={styles.venueName} numberOfLines={1}>
                         {item.venue.venue_name ?? 'Venue'}
                       </Text>
+                      <TouchableOpacity
+                        onPress={() => toggleFavorite(item.venue.venue_id)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={{ marginRight: 8 }}
+                      >
+                        <Ionicons
+                          name={isFavorited(item.venue.venue_id) ? 'heart' : 'heart-outline'}
+                          size={18}
+                          color={isFavorited(item.venue.venue_id) ? '#E8886B' : '#B7BDC8'}
+                        />
+                      </TouchableOpacity>
                       <Text style={styles.venueDistance}>{item.distanceMi.toFixed(1)} mi</Text>
                     </View>
                     <Text style={styles.venueAddress} numberOfLines={1}>

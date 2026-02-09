@@ -1,40 +1,30 @@
 """
-Gemini Vision Menu Parser
-Pure Gemini AI vision-based menu extraction without OCR
+Nexa AI Vision Menu Parser
+Nexa AI VLM-based menu extraction without OCR
 """
 import os
 import json
+import base64
+import requests
 from dotenv import load_dotenv
-import google.generativeai as genai
-import PIL.Image
 
 # Load environment variables
 load_dotenv()
 
 
 class VisionMenuParser:
-    """Gemini Vision-only menu parser"""
+    """Nexa AI Vision menu parser"""
 
-    def __init__(self, api_key=None):
+    def __init__(self, api_url=None):
         """
-        Initialize Gemini Vision parser
+        Initialize Nexa AI Vision parser
 
         Args:
-            api_key: Gemini API key (optional, reads from GEMINI_API_KEY env var)
+            api_url: Nexa API server URL (optional, reads from NEXA_API_URL env var)
         """
-        # Get API key
-        if api_key is None:
-            api_key = os.getenv('GEMINI_API_KEY')
-
-        if not api_key:
-            raise ValueError(
-                "Gemini API key required. Set GEMINI_API_KEY in .env or pass api_key parameter"
-            )
-
-        # Configure Gemini
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('models/gemini-2.5-flash')
-        print("[OK] Gemini Vision initialized")
+        self.api_url = api_url or os.getenv('NEXA_API_URL', 'http://127.0.0.1:18181')
+        self.model_name = os.getenv('NEXA_MODEL', 'NexaAI/Qwen3-VL-4B-Instruct-GGUF')
+        print(f"[OK] Nexa AI Vision initialized (server: {self.api_url})")
 
     def parse_menu(self, image_path):
         """
@@ -51,11 +41,11 @@ class VisionMenuParser:
         print(f"{'='*70}\n")
 
         try:
-            # Load image
+            # Prepare image path for Nexa API
             print(f"Loading image: {image_path}")
-            img = PIL.Image.open(image_path)
-            img.load()  # Load into memory
-            print(f"[OK] Image loaded - Size: {img.size}, Mode: {img.mode}, Format: {img.format}")
+            # Convert to absolute path
+            abs_image_path = os.path.abspath(image_path)
+            print(f"[OK] Image ready: {abs_image_path}")
 
             # Create prompt
             prompt = """Analyze this restaurant menu/happy hour deal image.
@@ -87,12 +77,29 @@ Important:
 - Include all restrictions/conditions
 - Return ONLY valid JSON, no markdown formatting"""
 
-            # Call Gemini Vision
-            print("Analyzing image with Gemini Vision...")
-            response = self.model.generate_content([prompt, img])
-            response_text = response.text.strip()
+            # Call Nexa AI Vision
+            print("Analyzing image with Nexa AI Vision...")
+            payload = {
+                "model": self.model_name,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": abs_image_path}}
+                        ]
+                    }
+                ],
+                "max_tokens": 2048
+            }
+            response = requests.post(
+                f"{self.api_url}/v1/chat/completions",
+                json=payload
+            )
+            response.raise_for_status()
+            response_text = response.json()["choices"][0]["message"]["content"].strip()
 
-            print(f"[DEBUG] Raw Gemini response length: {len(response_text)} characters")
+            print(f"[DEBUG] Raw Nexa response length: {len(response_text)} characters")
             print(f"[DEBUG] First 200 chars: {response_text[:200]}")
             print(f"[DEBUG] Full response:\n{response_text}\n")
 
@@ -163,7 +170,7 @@ def main():
     """Example usage"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='Parse menu image with Gemini Vision')
+    parser = argparse.ArgumentParser(description='Parse menu image with Nexa AI Vision')
     parser.add_argument('image', help='Path to menu image')
     parser.add_argument('--output', '-o', help='Output JSON file (optional)')
 

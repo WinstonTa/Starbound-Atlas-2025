@@ -1,8 +1,13 @@
 import { memo, useState } from 'react';
-import { View, Text, Image, StyleSheet, useWindowDimensions, TouchableOpacity, Modal, Pressable } from 'react-native';
-import type { FrontendVenueWithDeals, FrontendDeal } from '../src/get_venues';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import type { FrontendVenueWithDeals } from '../src/get_venues';
 
-type Props = { venue: FrontendVenueWithDeals };
+type Props = {
+  venue: FrontendVenueWithDeals;
+  isFavorited?: boolean;
+  onToggleFavorite?: (venueId: string) => void;
+};
 
 function formatAddr(addr: FrontendVenueWithDeals['address']): string {
   if (!addr) return '';
@@ -13,81 +18,70 @@ function formatAddr(addr: FrontendVenueWithDeals['address']): string {
   return parts.join(', ');
 }
 
-function pickPrimaryDeal(deals?: FrontendDeal[]): { start?: string; end?: string; title?: string; desc?: string } {
-  if (!Array.isArray(deals) || deals.length === 0) return {};
-  const d = deals[0];
-  return {
-    start: d.start_time ? String(d.start_time) : undefined,
-    end: d.end_time ? String(d.end_time) : undefined,
-    title: d.name ? String(d.name) : undefined,
-    desc: d.description ? String(d.description) : undefined,
-  };
-}
-
-const ListBox = memo(({ venue }: Props) => {
-  const { height, width } = useWindowDimensions();
-  const cardHeight = Math.round(height * 0.15);
+const ListBox = memo(({ venue, isFavorited = false, onToggleFavorite }: Props) => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const addr = formatAddr(venue.address);
-  const { start, end, title, desc } = pickPrimaryDeal(venue.deals);
+  const dealCount = Array.isArray(venue.deals) ? venue.deals.length : 0;
+  const firstDealName = dealCount > 0 ? (venue.deals![0].name ?? 'Deal') : null;
 
-  // Use uploaded image if available, otherwise use placeholder
   const imageSource = venue.image_url
     ? { uri: venue.image_url }
     : { uri: 'https://via.placeholder.com/100x100/E8886B/FFFFFF?text=No+Image' };
 
   return (
     <>
-      <View style={[styles.card, { height: cardHeight, width: width - 24 }]}>
-        <TouchableOpacity onPress={() => setModalVisible(true)} activeOpacity={0.8}>
+      <View style={styles.card}>
+        <TouchableOpacity activeOpacity={0.9} onPress={() => setModalVisible(true)}>
           <Image source={imageSource} style={styles.thumb} />
         </TouchableOpacity>
+
         <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={1}>
-          {String(venue.venue_name ?? 'Unnamed venue')}
-        </Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={1}>
+              {String(venue.venue_name ?? 'Unnamed venue')}
+            </Text>
+            {onToggleFavorite && (
+              <TouchableOpacity
+                onPress={() => onToggleFavorite(venue.venue_id)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.heartButton}
+              >
+                <Ionicons
+                  name={isFavorited ? 'heart' : 'heart-outline'}
+                  size={20}
+                  color={isFavorited ? '#E8886B' : '#B7BDC8'}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
 
-        {!!addr && (
-          <Text style={styles.addr} numberOfLines={1}>
-            {addr}
-          </Text>
-        )}
+          {!!addr && (
+            <Text style={styles.addr} numberOfLines={1}>
+              {addr}
+            </Text>
+          )}
 
-        {!!(start && end) && (
-          <Text style={styles.time} numberOfLines={1}>
-            {start} - {end}
-          </Text>
-        )}
-
-        <Text style={styles.desc} numberOfLines={2} ellipsizeMode="tail">
-          {title ?? 'No deals'}
-          {desc ? ` - ${desc}` : ''}
-        </Text>
+          {dealCount > 0 && (
+            <View style={styles.dealBadge}>
+              <Text style={styles.dealBadgeText}>
+                {dealCount === 1 ? firstDealName : `${dealCount} deals`}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
-      </View>
 
-      {/* Full-screen image modal */}
       <Modal
         animationType="fade"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}
-        >
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
           <View style={styles.modalContent}>
-            <Image
-              source={imageSource}
-              style={styles.fullImage}
-              resizeMode="contain"
-            />
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
+            <Image source={imageSource} style={styles.fullImage} resizeMode="contain" />
+            <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -104,20 +98,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 12,
-    marginVertical: 8,
+    marginVertical: 5,
     padding: 10,
     borderRadius: 12,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  thumb: { width: 100, height: 100, borderRadius: 8, marginRight: 10 },
+  thumb: { width: 48, height: 48, borderRadius: 8 },
   content: { flex: 1, justifyContent: 'center' },
-  title: { fontSize: 16, fontWeight: '700' },
-  addr: { fontSize: 12, color: '#666', marginTop: 2 },
-  time: { fontSize: 13, fontWeight: '600', marginTop: 4 },
-  desc: { fontSize: 13, marginTop: 4, flexShrink: 1 },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  title: { fontSize: 14, fontWeight: '700', color: '#1E1F24', flex: 1, marginRight: 8 },
+  addr: { fontSize: 12, color: '#6C7280', marginTop: 1 },
+  dealBadge: {
+    marginTop: 4,
+    backgroundColor: 'rgba(232, 136, 107, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  dealBadgeText: { fontSize: 11, fontWeight: '600', color: '#E8886B' },
+  heartButton: { padding: 4 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -131,8 +141,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fullImage: {
-    width: '90%',
-    height: '80%',
+    width: '92%',
+    height: '82%',
   },
   closeButton: {
     position: 'absolute',
@@ -152,4 +162,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-

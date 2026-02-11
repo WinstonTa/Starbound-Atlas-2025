@@ -46,7 +46,7 @@ def health_check():
     ), 200
 
 
-@app.route("/upload-menu", methods=["POST"])
+@app.route("/upload-deal", methods=["POST"])
 def upload_menu():
     """
     Upload menu image, process with Gemini Vision, and upload to Firebase

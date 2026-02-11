@@ -7,7 +7,7 @@ import { useFavorites } from '../src/favorites';
 import { Ionicons } from '@expo/vector-icons';
 import ListBox from '../components/ListBox';
 
-export default function ListScreen() {
+export default function FavoritesScreen() {
   const [venues, setVenues] = useState<FrontendVenueWithDeals[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -51,7 +51,7 @@ export default function ListScreen() {
   return (
     <Animated.View style={[styles.wrapper, { opacity: fadeAnim }]}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>Saved Deals</Text>
+        <Text style={styles.headerText}>Favorites</Text>
         <Text style={styles.headerSubtext}>{favoriteVenues.length} favorites</Text>
       </View>
 

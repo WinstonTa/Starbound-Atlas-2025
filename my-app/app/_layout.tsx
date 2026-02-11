@@ -43,7 +43,7 @@ export default function TabLayout() {
         },
       }}>
       <Tabs.Screen
-        name="map"
+        name="Map"
         options={{
           title: 'Map',
           tabBarLabel: 'Map',
@@ -57,9 +57,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="list"
+        name="Favorites"
         options={{
-          title: 'Saved Deals',
+          title: 'Favorites',
           tabBarLabel: 'Favorites',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -71,7 +71,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="upload-menu"
+        name="UploadDeal"
         options={{
           title: 'Add Deal',
           tabBarLabel: 'Add Deal',
@@ -85,13 +85,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="add_deal"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="splash"
+        name="Splash"
         options={{
           href: null,
         }}
@@ -103,13 +97,13 @@ export default function TabLayout() {
         }}
       />
        <Tabs.Screen
-        name="login"
+        name="Login"
         options={{
           href: null, // This hides the tab
         }}
       />
       <Tabs.Screen
-        name="signup"
+        name="Signup"
         options={{
           href: null, // This hides the tab
         }}

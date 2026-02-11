@@ -116,7 +116,12 @@ export default function MapScreen() {
   const sliderMin = 1;
   const sliderMax = 100;
   const sliderUnlimitedThreshold = 0.98;
-  const sliderThumbSize = 26;
+  const sliderThumbSize = 32;
+  const sliderHalfThumb = sliderThumbSize / 2;
+  const sliderFillWidth = useMemo(
+    () => Animated.add(sliderX, new Animated.Value(sliderHalfThumb)),
+    [sliderX]
+  );
   const sliderValueFromX = (x: number) => {
     if (!sliderTrackWidth.current) return maxDistanceMi;
     const maxX = Math.max(1, sliderTrackWidth.current - sliderThumbSize);
@@ -613,7 +618,7 @@ export default function MapScreen() {
                       sliderX.setValue(sliderXFromValue(maxDistanceMi));
                     }}
                   >
-                    <Animated.View style={[styles.sliderFill, { width: sliderX }]} />
+                    <Animated.View style={[styles.sliderFill, { width: sliderFillWidth }]} />
                     <Animated.View
                       style={[styles.sliderThumb, { transform: [{ translateX: sliderX }] }]}
                       {...sliderPanResponder.panHandlers}
@@ -871,21 +876,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sliderTrack: {
-    height: 10,
+    height: 30,
     backgroundColor: '#DCE0E6',
     borderRadius: 999,
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   sliderFill: {
-    height: 10,
-    backgroundColor: '#1E1F24',
+    height: 30,
+    backgroundColor: '#E8886B',
+    borderBottomLeftRadius: 999,
+    borderTopLeftRadius: 999,
   },
   sliderThumb: {
     position: 'absolute',
-    top: -8,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    top: -1,
+    width: 32,
+    height: 32,
+    borderRadius: 50,
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderColor: '#1E1F24',

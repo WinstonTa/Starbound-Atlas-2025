@@ -1,4 +1,4 @@
-// app/list.tsx
+// app/Favorites.tsx
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View, Animated } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';

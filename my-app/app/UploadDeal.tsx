@@ -13,6 +13,7 @@ import {
   Easing,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import VenueForm from '../components/VenueForm';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
@@ -24,6 +25,8 @@ export default function UploadDealScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedDocId, setUploadedDocId] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lon: number; lat: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // 🌀 Spinner animation setup
@@ -61,6 +64,37 @@ export default function UploadDealScreen() {
       return () => fadeAnim.stopAnimation();
     }, [fadeAnim])
   );
+
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
+
+  const getCurrentLocation = async () => {
+    try {
+      setLocationLoading(true);
+      
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Permission to access location was denied');
+        // Use default location (Los Angeles area for demo)
+        setUserLocation({lon: -118.243683, lat: 34.052235});
+        setLocationLoading(false);
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setUserLocation({ 
+        lon: location.coords.longitude,
+        lat: location.coords.latitude, 
+      });
+    } catch (error) {
+      console.error('Error getting location:', error);
+      // Use default location on error
+      setUserLocation({ lon: -118.243683, lat: 34.052235 });
+    } finally {
+      setLocationLoading(false);
+    }
+  };
 
   // 📸 Take photo using camera
   const takePhoto = async () => {
@@ -251,7 +285,14 @@ export default function UploadDealScreen() {
             </View>
 
             <View style={styles.formContainer}>
-              <VenueForm onSubmit={handleVenueSubmit} />
+              {userLocation ? (
+                <VenueForm onSubmit={handleVenueSubmit} userLocation={userLocation} />
+              ) : (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#E8886B" />
+                  <Text style={styles.locationLoadingText}>Getting your location...</Text>
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -426,6 +467,12 @@ const styles = StyleSheet.create({
   docIdText: {
     color: '#A67B5B',
     fontSize: 14,
+    textAlign: 'center',
+  },
+  locationLoadingText: {
+    color: '#666',
+    fontSize: 14,
+    marginTop: 10,
     textAlign: 'center',
   },
 });

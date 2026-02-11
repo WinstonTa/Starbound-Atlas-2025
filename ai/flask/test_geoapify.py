@@ -10,8 +10,8 @@ def search_restaurants(
     resturant_name: str,
     categories: str,
     filter: str,
-    lat: float,
     lon: float,
+    lat: float,
     radius: float,
     apiKey: str,
 ):
@@ -28,7 +28,7 @@ def search_restaurants(
 
     try:
         response = requests.request(
-            "GET", url, headers=headers, data=payload, timeout=10
+            "GET", url, headers=headers, data=payload, timeout=15
         )
         data = response.json()
         return data.get("features", [])  # extract features array
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     name = input("Testing search_restaurants function:")
 
     results = search_restaurants(
-        name, categories, filter, lat, lon, radius, str(apiKey)
+        name, categories, filter, lon, lat, radius, str(apiKey)
     )
     print(f"Found {len(results)} restaurants")
 

@@ -30,7 +30,7 @@ export default function VenueForm({ onSubmit, initialData }: VenueFormProps) {
     }
 
     if (!street.trim() || !city.trim() || !state.trim() || !zip.trim()) {
-      Alert.alert('Error', 'Please fill in all address fields');
+      Alert.alert('Error', 'Please enter a venue name');
       return;
     }
 
@@ -49,10 +49,9 @@ export default function VenueForm({ onSubmit, initialData }: VenueFormProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Venue Information</Text>
+      <Text style={styles.title}>SEARCH</Text>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Venue Name *</Text>
         <TextInput
           style={styles.input}
           value={venueName}
@@ -62,55 +61,6 @@ export default function VenueForm({ onSubmit, initialData }: VenueFormProps) {
         />
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Street Address *</Text>
-        <TextInput
-          style={styles.input}
-          value={street}
-          onChangeText={setStreet}
-          placeholder="123 Main St"
-          placeholderTextColor="#999"
-        />
-      </View>
-
-      <View style={styles.row}>
-        <View style={[styles.inputGroup, { flex: 2 }]}>
-          <Text style={styles.label}>City *</Text>
-          <TextInput
-            style={styles.input}
-            value={city}
-            onChangeText={setCity}
-            placeholder="City"
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
-          <Text style={styles.label}>State *</Text>
-          <TextInput
-            style={styles.input}
-            value={state}
-            onChangeText={setState}
-            placeholder="CA"
-            placeholderTextColor="#999"
-            maxLength={2}
-            autoCapitalize="characters"
-          />
-        </View>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>ZIP Code *</Text>
-        <TextInput
-          style={styles.input}
-          value={zip}
-          onChangeText={setZip}
-          placeholder="12345"
-          placeholderTextColor="#999"
-          keyboardType="number-pad"
-          maxLength={5}
-        />
-      </View>
 
       <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
         <Text style={styles.submitButtonText}>Save Venue Information</Text>

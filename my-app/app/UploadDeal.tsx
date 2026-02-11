@@ -20,7 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 // Deployed API URL using vercel
 const API_URL = 'https://happymapper.vercel.app';
-export default function UploadMenuScreen() {
+export default function UploadDealScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedDocId, setUploadedDocId] = useState<string | null>(null);
@@ -134,7 +134,7 @@ export default function UploadMenuScreen() {
         });
       }
 
-      const uploadResponse = await fetch(`${API_URL}/upload-menu`, {
+      const uploadResponse = await fetch(`${API_URL}/upload-deal`, {
         method: 'POST',
         body: formData,
       });
@@ -178,7 +178,7 @@ export default function UploadMenuScreen() {
 
         Alert.alert(
           'Success!',
-          `Menu uploaded successfully!\nThanks for sharing!`,
+          `Deal uploaded successfully!\nThanks for sharing!`,
           [
             {
               text: 'Upload Another',

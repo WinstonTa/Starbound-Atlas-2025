@@ -10,9 +10,9 @@ export default function StartupScreen() {
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(user => {
       if (user) {
-        router.replace('/map');
+        router.replace('/Map');
       } else {
-        router.replace('/login');
+        router.replace('/Login');
       }
     });
 

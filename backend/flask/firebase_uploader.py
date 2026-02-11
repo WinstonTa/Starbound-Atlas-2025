@@ -87,7 +87,7 @@ class FirebaseUploader:
             print(f"[ERROR] Failed to upload image to Storage: {e}")
             return None
 
-    def upload_menu(self, image_path, collection="final_schema"):
+    def upload_deal(self, image_path, collection="final_schema"):
         """Extract menu data via Gemini and upload to Firestore."""
         print(f"\n{'=' * 70}")
         print(f"Processing: {image_path}")
@@ -119,7 +119,7 @@ class FirebaseUploader:
 
         return doc_id
 
-    def update_menu(self, doc_id, updates, collection="final_schema"):
+    def update_deal(self, doc_id, updates, collection="final_schema"):
         """Update existing restaurant data in Firestore."""
         if "metadata" not in updates:
             updates["metadata"] = {}
@@ -149,7 +149,7 @@ class FirebaseUploader:
         for i, image_path in enumerate(image_paths, 1):
             print(f"\n[{i}/{len(image_paths)}] Processing {image_path}...")
             try:
-                doc_id = self.upload_menu(image_path, collection)
+                doc_id = self.upload_deal(image_path, collection)
                 results.append({"image": image_path, "id": doc_id, "status": "success"})
             except Exception as e:
                 print(f"[ERROR] Failed to process {image_path}: {e}")
@@ -176,7 +176,7 @@ def main():
     args = parser.parse_args()
 
     uploader = FirebaseUploader()
-    doc_id = uploader.upload_menu(args.image, collection=args.collection)
+    doc_id = uploader.upload_deal(args.image, collection=args.collection)
 
     print(f"\n{'=' * 70}")
     print(f"SUCCESS! Document ID: {doc_id}")

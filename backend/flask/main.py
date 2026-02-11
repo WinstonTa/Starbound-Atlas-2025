@@ -1,12 +1,12 @@
 """
-Flask API for Menu Image Upload and Processing
+Flask API for deal Image Upload and Processing
 Accepts image uploads from frontend, processes with Gemini Vision, uploads to Firebase
 """
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from firebase_uploader import FirebaseUploader
-from test_geoapify import search_restaurants
+from geoapify import search_restaurants
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -40,16 +40,16 @@ def health_check():
     return jsonify(
         {
             "status": "healthy",
-            "service": "menu-parser-api",
+            "service": "deal-parser-api",
             "timestamp": datetime.utcnow().isoformat(),
         }
     ), 200
 
 
 @app.route("/upload-deal", methods=["POST"])
-def upload_menu():
+def upload_deal():
     """
-    Upload menu image, process with Gemini Vision, and upload to Firebase
+    Upload deal image, process with Gemini Vision, and upload to Firebase
 
     Request:
         - image: Image file (multipart/form-data)
@@ -61,8 +61,8 @@ def upload_menu():
         {
       "success": true,
             "document_id": "abc123",
-            "data": { extracted menu data },
-            "message": "Menu uploaded successfully"
+            "data": { extracted deal data },
+            "message": "deal uploaded successfully"
         }
     """
     print(f"[DEBUG] Received upload request")
@@ -114,7 +114,7 @@ def upload_menu():
         print(f"[OK] Saved image to: {filepath}")
 
         # Process and upload to Firebase with Gemini Vision
-        doc_id = uploader.upload_menu(filepath, collection=collection)
+        doc_id = uploader.upload_deal(filepath, collection=collection)
 
         # If venue information is provided, update the document
         if venue_name or venue_address:
@@ -133,7 +133,7 @@ def upload_menu():
                     print("[WARNING] Invalid venue_address JSON, skipping")
 
             if venue_updates:
-                uploader.update_menu(doc_id, venue_updates, collection=collection)
+                uploader.update_deal(doc_id, venue_updates, collection=collection)
                 print(f"[OK] Updated venue information for {doc_id}")
 
         # Get the uploaded data
@@ -161,10 +161,10 @@ def upload_menu():
         return jsonify({"success": False, "error": str(e)}), 422
 
 
-@app.route("/update-menu/<doc_id>", methods=["PUT"])
-def update_menu(doc_id):
+@app.route("/update-deal/<doc_id>", methods=["PUT"])
+def update_deal(doc_id):
     """
-    Update existing menu data in Firebase
+    Update existing deal data in Firebase
 
     Request body (JSON):
         {
@@ -183,13 +183,13 @@ def update_menu(doc_id):
         updates = request.json
         collection = request.args.get("collection", "final_schema")
 
-        uploader.update_menu(doc_id, updates, collection=collection)
+        uploader.update_deal(doc_id, updates, collection=collection)
 
         return jsonify(
             {
                 "success": True,
                 "document_id": doc_id,
-                "message": "Menu updated successfully",
+                "message": "deal updated successfully",
             }
         ), 200
 
@@ -229,7 +229,7 @@ def update_venue(doc_id):
                 {"success": False, "error": "Must provide venue_name or address"}
             ), 400
 
-        uploader.update_menu(doc_id, venue_data, collection=collection)
+        uploader.update_deal(doc_id, venue_data, collection=collection)
 
         # Get updated data
         updated_data = uploader.get_restaurant(doc_id, collection=collection)
@@ -248,10 +248,10 @@ def update_venue(doc_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@app.route("/get-menu/<doc_id>", methods=["GET"])
-def get_menu(doc_id):
+@app.route("/get-deal/<doc_id>", methods=["GET"])
+def get_deal(doc_id):
     """
-    Get menu data by document ID
+    Get deal data by document ID
     """
     if not uploader:
         return jsonify(
@@ -265,17 +265,17 @@ def get_menu(doc_id):
         if data:
             return jsonify({"success": True, "data": data}), 200
         else:
-            return jsonify({"success": False, "error": "Menu not found"}), 404
+            return jsonify({"success": False, "error": "deal not found"}), 404
 
     except Exception as e:
         print(f"[ERROR] Get failed: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@app.route("/get-all-menus", methods=["GET"])
-def get_all_menus():
+@app.route("/get-all-deals", methods=["GET"])
+def get_all_deals():
     """
-    Get all menus from Firebase
+    Get all deals from Firebase
 
     Query params:
         - collection: Collection name (default: final_schema)
@@ -405,15 +405,15 @@ def search_restaurants_by_name():
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("Menu Parser API Server")
+    print("deal Parser API Server")
     print("=" * 70)
     print("Endpoints:")
     print("  GET  /health              - Health check")
-    print("  POST /upload-menu         - Upload and process menu image")
-    print("  PUT  /update-menu/<id>    - Update menu data")
+    print("  POST /upload-deal         - Upload and process deal image")
+    print("  PUT  /update-deal/<id>    - Update deal data")
     print("  PUT  /update-venue/<id>   - Update venue information")
-    print("  GET  /get-menu/<id>       - Get menu by ID")
-    print("  GET  /get-all-menus       - Get all menus")
+    print("  GET  /get-deal/<id>       - Get deal by ID")
+    print("  GET  /get-all-deals       - Get all deals")
     print("  GET  /search-restaurants-by-name - Search restaurants by name + location")
     print("=" * 70)
     # print("Starting server on http://0.0.0.0:5000")

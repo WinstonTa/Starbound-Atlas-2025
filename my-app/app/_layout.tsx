@@ -85,6 +85,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+          name="SearchList"
+          options={{
+          }}
+      />
+      <Tabs.Screen
         name="Splash"
         options={{
           href: null,

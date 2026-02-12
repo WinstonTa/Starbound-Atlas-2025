@@ -91,9 +91,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   headerText: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#1E1F24',
+    color: '#E8886B',
   },
   headerSubtext: {
     fontSize: 13,

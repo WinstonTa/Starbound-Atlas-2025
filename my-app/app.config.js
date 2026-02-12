@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export default {
   expo: {
     name: 'happymapper',
@@ -26,6 +28,9 @@ export default {
       config: {
         googleMaps: { apiKey: process.env.ANDROID_GOOGLE_MAPS_KEY }, // optional env
       },
+      extra: {
+        googlePlacesKey: process.env.ANDROID_GOOGLE_PLACES_KEY,
+      },
     },
     web: { output: 'static', favicon: './assets/images/favicon.png' },
     plugins: [
@@ -46,6 +51,7 @@ export default {
     extra: {
       router: {},
       eas: { projectId: 'c2fd428d-835a-4f18-a590-8389062c3fd3' },
+      googlePlacesKey: process.env.ANDROID_GOOGLE_PLACES_KEY,
     },
   },
 };

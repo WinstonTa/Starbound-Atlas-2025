@@ -299,110 +299,6 @@ def get_all_deals():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@app.route("/search-restaurants-by-name", methods=["GET"])
-def search_restaurants_by_name():
-    """
-    Search for restaurants by name with user's location using Geoapify API
-
-    Required Query Parameters:
-        - name: Restaurant name to search for
-        - lon: User's longitude
-        - lat: User's latitude
-
-
-    Optional Query Parameters:
-        - radius: Search radius in meters (default: 5000)
-        - limit: Maximum number of results (default: 20)
-        - categories: Restaurant categories (default: "catering.restaurant")
-
-    Returns:
-        JSON response with restaurant data including names, addresses, and coordinates
-    """
-    try:
-        # Get required parameters
-        name = request.args.get("name")
-        lon = request.args.get("lon", type=float)
-        lat = request.args.get("lat", type=float)
-
-        print("lat, lon:", lat, lon)
-
-        # Validate required parameters
-        if not name or lat is None or lon is None:
-            return jsonify(
-                {
-                    "success": False,
-                    "error": "Missing required parameters: name, lat, and lon are required",
-                }
-            ), 400
-
-        # Get optional parameters with defaults
-        radius = request.args.get("radius", 5000, type=int)
-        limit = request.args.get("limit", 20, type=int)
-        categories = request.args.get("categories", "catering")
-
-        # Get API key
-        api_key = os.getenv("GEOAPIFY_API_KEY")
-        if not api_key:
-            return jsonify({"success": False, "error": "API key not configured"}), 500
-
-        # Search for restaurants
-        features = search_restaurants(
-            name, categories, "circle", lon, lat, radius, api_key
-        )
-
-        # add results as a directory, no repeating results
-        results = []
-        seen_ids = set()
-
-        for feature in features:
-            props = feature.get("properties", {})
-            place_id = props.get("place_id")
-
-            if not place_id or place_id in seen_ids:
-                continue
-
-            seen_ids.add(place_id)
-
-            restaurant = {
-                "venue_name": props.get("name"),
-                "address": {
-                    "street": props.get("address_line1"),
-                    "city": props.get("city"),
-                    "state": props.get("state"),
-                    "zip": props.get("postcode"),
-                },
-                "formatted": props.get("formatted"),
-                "coordinates": {
-                    "lat": props.get("lat"),
-                    "lon": props.get("lon"),
-                },
-                "distance_meters": props.get("distance"),
-                "geoapify_place_id": place_id,
-            }
-
-            results.append(restaurant)
-
-        return jsonify(
-            {
-                "success": True,
-                "count": len(results),
-                "query": {
-                    "name": name,
-                    "location": {"lat": lat, "lon": lon},
-                    "radius": radius,
-                    "categories": categories,
-                },
-                "data": results,
-            },
-        ), 200
-
-    except ValueError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
-    except Exception as e:
-        print(f"[ERROR] Restaurant search failed: {str(e)}")
-        return jsonify({"success": False, "error": "Internal server error"}), 500
-
-
 if __name__ == "__main__":
     print("=" * 70)
     print("deal Parser API Server")
@@ -414,7 +310,6 @@ if __name__ == "__main__":
     print("  PUT  /update-venue/<id>   - Update venue information")
     print("  GET  /get-deal/<id>       - Get deal by ID")
     print("  GET  /get-all-deals       - Get all deals")
-    print("  GET  /search-restaurants-by-name - Search restaurants by name + location")
     print("=" * 70)
     # print("Starting server on http://0.0.0.0:5000")
     print("=" * 70)

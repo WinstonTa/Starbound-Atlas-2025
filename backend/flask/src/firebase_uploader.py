@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials, firestore, storage
 from datetime import datetime
-from vision_parser import VisionMenuParser
+from src.vision_parser import VisionMenuParser
 
 
 class FirebaseUploader:

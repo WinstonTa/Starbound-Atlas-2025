@@ -71,7 +71,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="UploadDeal"
+        name="SearchAndUpload"
         options={{
           title: 'Add Deal',
           tabBarLabel: 'Add Deal',
@@ -85,9 +85,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-          name="SearchList"
-          options={{
-          }}
+        name="SearchList"
+        options={{
+          href: null,
+        }}
       />
       <Tabs.Screen
         name="Splash"

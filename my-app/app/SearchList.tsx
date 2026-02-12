@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
 
-  // Important: position context for absolute list
+  // position context for absolute list
   searchBlock: {
     position: "relative",
     zIndex: 10,

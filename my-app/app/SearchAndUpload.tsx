@@ -82,6 +82,54 @@ export default function SearchAndUpload() {
     }
   };
 
+  // Parse Google Places response into VenueFormData format
+  const parseVenueData = (placeData) => {
+    const venue_name = placeData.structured_formatting?.main_text || placeData.description || '';
+    const addressComponents = placeData.terms || [];
+    
+    // Extract address components from terms array
+    let street = '';
+    let city = '';
+    let state = '';
+    let zip = '';
+
+    // Try to extract from structured data first
+    if (placeData.description) {
+      const addressParts = placeData.description.split(', ');
+      if (addressParts.length >= 3) {
+        street = addressParts[0] || '';
+        city = addressParts[1] || '';
+        const stateZip = addressParts[2]?.split(' ') || [];
+        state = stateZip[0] || '';
+        zip = stateZip[1] || '';
+      }
+    }
+
+    // Fallback to terms array if description parsing fails
+    if (!street && addressComponents.length > 0) {
+      street = addressComponents[0].value || '';
+    }
+    if (!city && addressComponents.length > 1) {
+      city = addressComponents[addressComponents.length - 3]?.value || '';
+    }
+    if (!state && addressComponents.length > 2) {
+      state = addressComponents[addressComponents.length - 2]?.value || '';
+    }
+    if (!zip && addressComponents.length > 1) {
+      zip = addressComponents[addressComponents.length - 1]?.value || '';
+    }
+
+    return {
+      venue_name,
+      address: {
+        street,
+        city,
+        state,
+        zip
+      }
+    };
+  };
+
   const handleSubmit = async () => {
     if (!selectedVenue) {
       Alert.alert('Error', 'Please select a venue first');
@@ -96,17 +144,13 @@ export default function SearchAndUpload() {
     setUploading(true);
 
     try {
+      // Parse venue data into correct format
+      const venueData = parseVenueData(selectedVenue);
+      console.log('Parsed venue data:', venueData);
+
       const formData = new FormData();
-      formData.append('venue_name', selectedVenue.structured_formatting?.main_text || selectedVenue.description);
-      
-      // Use the place details for address
-      const address = {
-        main_text: selectedVenue.structured_formatting?.main_text,
-        secondary_text: selectedVenue.structured_formatting?.secondary_text,
-        description: selectedVenue.description,
-        place_id: selectedVenue.place_id
-      };
-      formData.append('venue_address', JSON.stringify(address));
+      formData.append('venue_name', venueData.venue_name);
+      formData.append('venue_address', JSON.stringify(venueData.address));
 
       // Add image
       const filename = selectedImage.split('/').pop() || 'menu.jpg';

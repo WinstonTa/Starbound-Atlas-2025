@@ -1,5 +1,6 @@
+import React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View, ScrollView, ActivityIndicator, Text, TextInput, TouchableOpacity, Platform, Dimensions, Animated, PanResponder, FlatList, Keyboard } from 'react-native';
+import { StyleSheet, View, ScrollView, ActivityIndicator, Text, TextInput, TouchableOpacity, Platform, Dimensions, Animated, PanResponder, FlatList, Keyboard, Modal } from 'react-native';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,6 +47,7 @@ export default function MapScreen() {
   const [sheetState, setSheetState] = useState<'open' | 'peek' | 'hidden'>('peek');
   const [maxDistanceMi, setMaxDistanceMi] = useState<number>(10);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
   const geocodeCache = useRef<Record<string, { latitude: number; longitude: number }>>({});
   const unsubRef = useRef<() => void | null>(null);
   const mapRef = useRef<any>(null);
@@ -393,11 +395,12 @@ export default function MapScreen() {
   }
 
   return (
+    <>
     <View style={{ flex: 1 }}>
       <MapView
         ref={mapRef}
         style={styles.map}
-        provider={PROVIDER_GOOGLE}             // explicitly set google as provider of map
+        provider={PROVIDER_GOOGLE}
         region={region}
         showsUserLocation
         followsUserLocation
@@ -577,13 +580,20 @@ export default function MapScreen() {
             </View>
             <Text style={styles.detailAddress}>{formatAddress(selectedVenue.address) || 'No address available'}</Text>
             <View style={styles.detailImageWrap}>
-              {selectedVenue.image_url ? (
-                <Image source={{ uri: selectedVenue.image_url }} style={styles.detailImage} contentFit="cover" />
-              ) : (
-                <View style={styles.detailImagePlaceholder}>
-                  <MaterialCommunityIcons name="image-off-outline" size={32} color="#9AA0AA" />
-                </View>
-              )}
+              <TouchableOpacity 
+                style={styles.detailImageTouchable}
+                activeOpacity={0.9}
+                onPress={() => selectedVenue?.image_url && setImageModalVisible(true)}
+                disabled={!selectedVenue?.image_url}
+              >
+                {selectedVenue.image_url ? (
+                  <Image source={{ uri: selectedVenue.image_url }} style={styles.detailImage} contentFit="cover" />
+                ) : (
+                  <View style={styles.detailImagePlaceholder}>
+                    <MaterialCommunityIcons name="image-off-outline" size={32} color="#9AA0AA" />
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
             {selectedVenue.deals && selectedVenue.deals.length > 0 ? (
               <View style={styles.detailDeals}>
@@ -707,6 +717,35 @@ export default function MapScreen() {
         )}
       </Animated.View>
     </View>
+    <Modal
+      visible={imageModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setImageModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.imageModalOverlay} 
+        activeOpacity={1}
+        onPress={() => setImageModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.imageModalClose}
+          onPress={() => setImageModalVisible(false)}
+        >
+          <Ionicons name="close-circle" size={40} color="#FFFFFF" />
+        </TouchableOpacity>
+        {selectedVenue?.image_url && (
+          <View style={styles.imageModalContent}>
+            <Image 
+              source={{ uri: selectedVenue.image_url }} 
+              style={styles.imageModalImage} 
+              contentFit="contain" 
+            />
+          </View>
+        )}
+      </TouchableOpacity>
+    </Modal>
+  </>
   );
 }
 
@@ -924,6 +963,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: '#EEF1F5',
   },
+  detailImageTouchable: {
+    flex: 1,
+  },
   detailImage: {
     width: '100%',
     height: '100%',
@@ -933,6 +975,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#EEF1F5',
+  },
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalContent: {
+    width: '90%',
+    height: '70%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imageModalImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imageModalClose: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    padding: 10,
+    zIndex: 1,
   },
   detailHeader: {
     flexDirection: 'row',

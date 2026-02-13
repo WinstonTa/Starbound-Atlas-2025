@@ -96,7 +96,7 @@ class FirebaseUploader:
         # Upload image to Firebase Storage
         image_url = self.upload_image_to_storage(image_path)
 
-        data = self.parser.parse_menu(image_path)
+        data = self.parser.parse_deal(image_path)
         data["metadata"] = {
             "uploaded_at": datetime.utcnow().isoformat(),
             "image_filename": os.path.basename(image_path),

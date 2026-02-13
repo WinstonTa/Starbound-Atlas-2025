@@ -8,6 +8,7 @@ firebase-admin>=6.0.0
 
 # AI/Vision
 google-generativeai>=0.3.0
+nexaai
 
 # Image processing
 Pillow>=10.0.0

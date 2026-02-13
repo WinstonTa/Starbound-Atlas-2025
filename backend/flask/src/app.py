@@ -48,3 +48,4 @@ if __name__ == "__main__":
     print("=" * 70)
     # print("Starting server on http://0.0.0.0:5000")
     print("=" * 70)
+    app.run()

@@ -2,6 +2,7 @@
 Nexa AI Vision Menu Parser
 Nexa AI VLM-based menu extraction without OCR
 """
+
 import os
 import json
 import base64
@@ -22,23 +23,23 @@ class VisionMenuParser:
         Args:
             api_url: Nexa API server URL (optional, reads from NEXA_API_URL env var)
         """
-        self.api_url = api_url or os.getenv('NEXA_API_URL', 'http://127.0.0.1:18181')
-        self.model_name = os.getenv('NEXA_MODEL', 'NexaAI/Qwen3-VL-4B-Instruct-GGUF')
+        self.api_url = api_url or os.getenv("NEXA_API_URL", "http://127.0.0.1:18181")
+        self.model_name = os.getenv("NEXA_MODEL", "NexaAI/Qwen3-VL-4B-Instruct-GGUF")
         print(f"[OK] Nexa AI Vision initialized (server: {self.api_url})")
 
-    def parse_menu(self, image_path):
+    def parse_deal(self, image_path):
         """
-        Parse menu image and extract structured data
+        Parse deal image and extract structured data
 
         Args:
-            image_path: Path to menu image
+            image_path: Path to deal image
 
         Returns:
             dict: Structured menu data with restaurant_name, deals, time_frame, special_conditions
         """
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"Processing: {image_path}")
-        print(f"{'='*70}\n")
+        print(f"{'=' * 70}\n")
 
         try:
             # Prepare image path for Nexa API
@@ -86,15 +87,14 @@ Important:
                         "role": "user",
                         "content": [
                             {"type": "text", "text": prompt},
-                            {"type": "image_url", "image_url": {"url": abs_image_path}}
-                        ]
+                            {"type": "image_url", "image_url": {"url": abs_image_path}},
+                        ],
                     }
                 ],
-                "max_tokens": 2048
+                "max_tokens": 2048,
             }
             response = requests.post(
-                f"{self.api_url}/v1/chat/completions",
-                json=payload
+                f"{self.api_url}/v1/chat/completions", json=payload
             )
             response.raise_for_status()
             response_text = response.json()["choices"][0]["message"]["content"].strip()
@@ -104,10 +104,10 @@ Important:
             print(f"[DEBUG] Full response:\n{response_text}\n")
 
             # Clean response (remove markdown if present)
-            if response_text.startswith('```'):
+            if response_text.startswith("```"):
                 print("[DEBUG] Response has markdown formatting, cleaning...")
-                json_text = response_text.split('```')[1]
-                if json_text.startswith('json'):
+                json_text = response_text.split("```")[1]
+                if json_text.startswith("json"):
                     json_text = json_text[4:]
                 response_text = json_text.strip()
                 print(f"[DEBUG] Cleaned response:\n{response_text}\n")
@@ -117,15 +117,17 @@ Important:
             data = json.loads(response_text)
             print(f"[DEBUG] JSON parsed successfully!")
             print(f"[DEBUG] Parsed data type: {type(data)}")
-            print(f"[DEBUG] Parsed data keys: {data.keys() if isinstance(data, dict) else 'Not a dict'}")
+            print(
+                f"[DEBUG] Parsed data keys: {data.keys() if isinstance(data, dict) else 'Not a dict'}"
+            )
 
             print(f"[OK] Extracted data:")
             print(f"  Restaurant: {data.get('restaurant_name')}")
-            deals = data.get('deals', [])
+            deals = data.get("deals", [])
             print(f"  Deals: {len(deals) if deals else 0} items")
-            time_frame = data.get('time_frame', [])
+            time_frame = data.get("time_frame", [])
             print(f"  Time Frames: {len(time_frame) if time_frame else 0} slots")
-            conditions = data.get('special_conditions', [])
+            conditions = data.get("special_conditions", [])
             print(f"  Conditions: {len(conditions) if conditions else 0} items")
 
             return data
@@ -138,7 +140,7 @@ Important:
                 "deals": None,
                 "time_frame": None,
                 "special_conditions": None,
-                "error": f"JSON parsing error: {str(e)}"
+                "error": f"JSON parsing error: {str(e)}",
             }
 
         except Exception as e:
@@ -148,7 +150,7 @@ Important:
                 "deals": None,
                 "time_frame": None,
                 "special_conditions": None,
-                "error": str(e)
+                "error": str(e),
             }
 
     def parse_to_json(self, image_path, pretty=True):
@@ -162,7 +164,7 @@ Important:
         Returns:
             str: JSON string
         """
-        data = self.parse_menu(image_path)
+        data = self.parse_deal(image_path)
         return json.dumps(data, indent=2 if pretty else None)
 
 
@@ -170,9 +172,9 @@ def main():
     """Example usage"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='Parse menu image with Nexa AI Vision')
-    parser.add_argument('image', help='Path to menu image')
-    parser.add_argument('--output', '-o', help='Output JSON file (optional)')
+    parser = argparse.ArgumentParser(description="Parse deal image with Nexa AI Vision")
+    parser.add_argument("image", help="Path to deal image")
+    parser.add_argument("--output", "-o", help="Output JSON file (optional)")
 
     args = parser.parse_args()
 
@@ -180,17 +182,17 @@ def main():
     parser = VisionMenuParser()
 
     # Parse menu
-    data = parser.parse_menu(args.image)
+    data = parser.parse_deal(args.image)
 
     # Print result
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print("EXTRACTED DATA:")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
     print(json.dumps(data, indent=2))
 
     # Save to file if specified
     if args.output:
-        with open(args.output, 'w', encoding='utf-8') as f:
+        with open(args.output, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         print(f"\n[OK] Saved to: {args.output}")
 

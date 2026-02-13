@@ -13,7 +13,6 @@ import {
   Easing,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import VenueForm from '../components/VenueForm';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
@@ -21,12 +20,10 @@ import { useFocusEffect } from '@react-navigation/native';
 
 // Deployed API URL using vercel
 const API_URL = 'https://happymapper.vercel.app';
-export default function UploadDealScreen() {
+export default function UploadMenuScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedDocId, setUploadedDocId] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lon: number; lat: number } | null>(null);
-  const [locationLoading, setLocationLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // 🌀 Spinner animation setup
@@ -65,37 +62,6 @@ export default function UploadDealScreen() {
     }, [fadeAnim])
   );
 
-  useEffect(() => {
-    getCurrentLocation();
-  }, []);
-
-  const getCurrentLocation = async () => {
-    try {
-      setLocationLoading(true);
-      
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Permission to access location was denied');
-        // Use default location (Los Angeles area for demo)
-        setUserLocation({lon: -118.243683, lat: 34.052235});
-        setLocationLoading(false);
-        return;
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-      setUserLocation({ 
-        lon: location.coords.longitude,
-        lat: location.coords.latitude, 
-      });
-    } catch (error) {
-      console.error('Error getting location:', error);
-      // Use default location on error
-      setUserLocation({ lon: -118.243683, lat: 34.052235 });
-    } finally {
-      setLocationLoading(false);
-    }
-  };
-
   // 📸 Take photo using camera
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -106,7 +72,7 @@ export default function UploadDealScreen() {
 
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      quality: 1,
+      quality: 0.8,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -126,7 +92,7 @@ export default function UploadDealScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      quality: 1,
+      quality: 0.8,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -212,7 +178,7 @@ export default function UploadDealScreen() {
 
         Alert.alert(
           'Success!',
-          `Deal uploaded successfully!\nThanks for sharing!`,
+          `Menu uploaded successfully!\nThanks for sharing!`,
           [
             {
               text: 'Upload Another',
@@ -285,14 +251,7 @@ export default function UploadDealScreen() {
             </View>
 
             <View style={styles.formContainer}>
-              {userLocation ? (
-                <VenueForm onSubmit={handleVenueSubmit} userLocation={userLocation} />
-              ) : (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color="#E8886B" />
-                  <Text style={styles.locationLoadingText}>Getting your location...</Text>
-                </View>
-              )}
+              <VenueForm onSubmit={handleVenueSubmit} />
             </View>
           </View>
         )}
@@ -323,7 +282,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 24,
     fontWeight: '500',
-    color: '#E8886B',
+    color: '#D6453B',
     letterSpacing: 1,
   },
   container: {
@@ -469,11 +428,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  locationLoadingText: {
-    color: '#666',
-    fontSize: 14,
-    marginTop: 10,
-    textAlign: 'center',
-  },
 });
-

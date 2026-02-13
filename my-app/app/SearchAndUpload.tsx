@@ -31,7 +31,7 @@ export default function SearchAndUpload() {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        consle.log("Did not get user's location, using default in LA")
+        console.log("Did not get user's location, using default in LA")
         setUserLocation({lon: -118.243683, lat: 34.052235});
         return;
       }
@@ -47,11 +47,17 @@ export default function SearchAndUpload() {
     }
   };
 
+  // Open camera to take photo
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    const { status } = await ImagePicker.getCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant camera permission');
-      return;
+      const { newStatus } = await ImagePicker.requestCameraPermissionsAsync();
+
+      if ( newStatus !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera permission');
+        return;
+      }
+      
     }
 
     const result = await ImagePicker.launchCameraAsync({
@@ -64,23 +70,30 @@ export default function SearchAndUpload() {
     }
   };
 
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
+  // Pick image from gallery 
+const pickImage = async () => {
+  // Check current permission status first (faster)
+  let { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+  
+  // Only request if not granted
+  if (status !== 'granted') {
+    const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (newStatus !== 'granted') {
       Alert.alert('Permission needed', 'Please grant media library permission');
       return;
     }
+  }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 1,
-    });
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    quality: 1,
+  });
 
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
-    }
-  };
+  if (!result.canceled && result.assets[0]) {
+    setSelectedImage(result.assets[0].uri);
+  }
+};
 
   // Parse Google Places response into VenueFormData format
   const parseVenueData = (placeData) => {
@@ -130,6 +143,7 @@ export default function SearchAndUpload() {
     };
   };
 
+  // Handles submit 
   const handleSubmit = async () => {
     if (!selectedVenue) {
       Alert.alert('Error', 'Please select a venue first');

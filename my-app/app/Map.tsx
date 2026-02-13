@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View, ActivityIndicator, Text, TextInput, TouchableOpacity, Platform, Dimensions, Animated, PanResponder, FlatList, Keyboard } from 'react-native';
+import { StyleSheet, View, ScrollView, ActivityIndicator, Text, TextInput, TouchableOpacity, Platform, Dimensions, Animated, PanResponder, FlatList, Keyboard } from 'react-native';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,7 +54,7 @@ export default function MapScreen() {
   const sliderTrackRef = useRef<any>(null);
   const sliderX = useRef(new Animated.Value(0)).current;
   const { height: screenHeight } = Dimensions.get('window');
-  const sheetHeight = Math.min(screenHeight * 0.72, 560);
+  const sheetHeight = Math.min(screenHeight * 0.72, 1000);
   const peekHeight = 200 + insets.bottom;
   const hiddenPeek = 24 + insets.bottom;
   const peekTranslate = Math.max(0, sheetHeight - peekHeight);
@@ -559,7 +559,7 @@ export default function MapScreen() {
           </View>
         </View>
         {selectedVenue ? (
-          <View style={styles.detailCard}>
+          <ScrollView style={styles.detailCard}>
             <View style={styles.detailHeader}>
               <Text style={styles.detailTitle}>{selectedVenue.venue_name ?? 'Venue'}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -576,6 +576,15 @@ export default function MapScreen() {
               </View>
             </View>
             <Text style={styles.detailAddress}>{formatAddress(selectedVenue.address) || 'No address available'}</Text>
+            <View style={styles.detailImageWrap}>
+              {selectedVenue.image_url ? (
+                <Image source={{ uri: selectedVenue.image_url }} style={styles.detailImage} contentFit="cover" />
+              ) : (
+                <View style={styles.detailImagePlaceholder}>
+                  <MaterialCommunityIcons name="image-off-outline" size={32} color="#9AA0AA" />
+                </View>
+              )}
+            </View>
             {selectedVenue.deals && selectedVenue.deals.length > 0 ? (
               <View style={styles.detailDeals}>
                 {selectedVenue.deals.map((d, idx) => (
@@ -596,7 +605,7 @@ export default function MapScreen() {
             ) : (
               <Text style={styles.detailDealText}>No deals available</Text>
             )}
-          </View>
+          </ScrollView>
         ) : (
           <FlatList
             data={nearbyVenues}
@@ -899,12 +908,31 @@ const styles = StyleSheet.create({
   },
   detailCard: {
     marginHorizontal: 14,
-    marginBottom: 6,
+    marginBottom: 5,
+    marginTop: 10,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
     borderColor: '#E6E9EE',
+  },
+  detailImageWrap: {
+    width: '100%',
+    height: 350,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 12,
+    backgroundColor: '#EEF1F5',
+  },
+  detailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  detailImagePlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF1F5',
   },
   detailHeader: {
     flexDirection: 'row',
@@ -957,8 +985,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   venueImageWrap: {
-    width: 72,
-    height: 72,
+    width: 90,
+    height: 90,
     borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: '#EEF1F5',

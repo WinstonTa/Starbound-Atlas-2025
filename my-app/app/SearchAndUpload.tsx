@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,15 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
+  Pressable,
+  Image,
 } from "react-native";
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import auth from '@react-native-firebase/auth';
@@ -25,6 +29,32 @@ export default function SearchAndUpload() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [loadingPicker, setLoadingPicker] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
+  const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
+  const [prewarmCamera, setPrewarmCamera] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [cam, lib] = await Promise.all([
+          ImagePicker.getCameraPermissionsAsync(),
+          ImagePicker.getMediaLibraryPermissionsAsync(),
+        ]);
+        await Promise.all([
+          cam.status === 'undetermined' ? ImagePicker.requestCameraPermissionsAsync() : Promise.resolve(),
+          lib.status === 'undetermined' ? ImagePicker.requestMediaLibraryPermissionsAsync() : Promise.resolve(),
+        ]);
+      } catch {
+        // Ignore; permissions will be requested on action
+      }
+    })();
+  }, []);
 
   // Get user location for form
   const getCurrentLocation = async () => {
@@ -47,53 +77,73 @@ export default function SearchAndUpload() {
     }
   };
 
-  // Open camera to take photo
-  const takePhoto = async () => {
-    const { status } = await ImagePicker.getCameraPermissionsAsync();
-    if (status !== 'granted') {
-      const { newStatus } = await ImagePicker.requestCameraPermissionsAsync();
-
-      if ( newStatus !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant camera permission');
-        return;
+  const openCamera = async () => {
+    setLoadingPicker('Cooking...');
+    try {
+      if (!cameraPermission?.granted) {
+        const req = await requestCameraPermission();
+        if (!req.granted) {
+          Alert.alert('Permission needed', 'Please grant camera permission');
+          return;
+        }
       }
-      
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
+      setPrewarmCamera(true);
+      setShowCamera(true);
+    } catch (e: any) {
+      Alert.alert('Camera error', e?.message ?? 'Failed to open camera');
+    } finally {
+      setLoadingPicker(null);
     }
   };
 
-  // Pick image from gallery 
-const pickImage = async () => {
-  // Check current permission status first (faster)
-  let { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-  
-  // Only request if not granted
-  if (status !== 'granted') {
-    const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (newStatus !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant media library permission');
-      return;
+  const takePhoto = async () => {
+    if (!cameraRef.current) return;
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        skipProcessing: true,
+      });
+      if (photo?.uri) {
+        setSelectedImage(photo.uri);
+        setShowCamera(false);
+      }
+    } catch (e: any) {
+      Alert.alert('Camera error', e?.message ?? 'Failed to take photo');
     }
-  }
+  };
 
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: true,
-    quality: 1,
-  });
+  // Pick image from gallery
+const pickImage = async () => {
+  setLoadingPicker('Cooking...');
+  setShowCamera(false);
+  try {
+      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (newStatus !== 'granted') {
+          Alert.alert('Permission needed', 'Please grant media library permission');
+          return;
+        }
+      }
 
-  if (!result.canceled && result.assets[0]) {
-    setSelectedImage(result.assets[0].uri);
-  }
-};
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.7,
+      });
+
+    if (!result.canceled && result.assets[0]) {
+      setSelectedImage(result.assets[0].uri);
+    } else {
+      setSelectedImage(null);
+      setShowCamera(false);
+    }
+    } catch (e: any) {
+      Alert.alert('Gallery error', e?.message ?? 'Failed to open gallery');
+    } finally {
+      setLoadingPicker(null);
+    }
+  };
 
   // Parse Google Places response into VenueFormData format
   const parseVenueData = (placeData) => {
@@ -225,7 +275,7 @@ const pickImage = async () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#E8886B" />
-        <Text style={styles.loadingText}>Uploading deal data...</Text>
+        <Text style={styles.loadingText}>Image is uploading...</Text>
       </View>
     );
   }
@@ -366,31 +416,92 @@ const pickImage = async () => {
           
           {!selectedImage ? (
             <View style={styles.imageUploadSection}>
-              <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
-                  <Text style={styles.cameraIcon}>📷</Text>
-                  <Text style={styles.buttonText}>Camera</Text>
-                </TouchableOpacity>
+              {prewarmCamera && (
+                <CameraView
+                  ref={cameraRef}
+                  style={styles.cameraPrewarm}
+                  facing={cameraFacing}
+                  flash={flashMode}
+                />
+              )}
+              {!showCamera ? (
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity style={styles.cameraButton} onPress={openCamera}>
+                    <Text style={styles.cameraIcon}>📷</Text>
+                    <Text style={styles.buttonText}>Camera</Text>
+                  </TouchableOpacity>
 
-                <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
-                  <Text style={styles.galleryIcon}>🖼️</Text>
-                  <Text style={styles.buttonText}>Gallery</Text>
-                </TouchableOpacity>
-              </View>
+                  <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
+                    <Text style={styles.galleryIcon}>🖼️</Text>
+                    <Text style={styles.buttonText}>Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.cameraWrap}>
+                  <CameraView
+                    ref={cameraRef}
+                    style={styles.cameraPreview}
+                    facing={cameraFacing}
+                    flash={flashMode}
+                  />
+                  <View style={styles.cameraTopControls}>
+                    <TouchableOpacity
+                      style={styles.cameraTopButton}
+                      onPress={() => setFlashMode((prev) => (prev === 'off' ? 'on' : prev === 'on' ? 'auto' : 'off'))}
+                    >
+                      <Ionicons
+                        name={flashMode === 'off' ? 'flash-off' : flashMode === 'on' ? 'flash' : 'flash-outline'}
+                        size={18}
+                        color="#FFFFFF"
+                      />
+                      <Text style={styles.cameraTopText}>{flashMode.toUpperCase()}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.cameraTopButton}
+                      onPress={() => setCameraFacing((prev) => (prev === 'back' ? 'front' : 'back'))}
+                    >
+                      <Ionicons name="camera-reverse" size={18} color="#FFFFFF" />
+                      <Text style={styles.cameraTopText}>Flip</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={[styles.cameraControls, { bottom: 72 + insets.bottom }]}>
+                    <TouchableOpacity style={styles.cameraControlButton} onPress={() => setShowCamera(false)}>
+                      <Text style={styles.cameraControlText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.shutterButton} onPress={takePhoto}>
+                      <View style={styles.shutterOuter}>
+                        <View style={styles.shutterInner} />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           ) : (
             <View style={styles.imagePreview}>
               <Text style={styles.imageLabel}>Menu Image:</Text>
-              <View style={styles.imageContainer}>
-                <Text style={styles.imageFileName}>{selectedImage.split('/').pop()}</Text>
-                <TouchableOpacity 
-                  style={styles.changeImageButton} 
-                  onPress={() => setSelectedImage(null)}
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  style={styles.imagePreviewCard}
+                  onPress={() => setImageModalVisible(true)}
                 >
-                  <Ionicons name="refresh" size={16} color="#E8886B" />
-                  <Text style={styles.changeImageText}>Change</Text>
-                </TouchableOpacity>
-              </View>
+                <View style={styles.imageContainer}>
+                  <Text style={styles.imageFileName}>{selectedImage.split('/').pop()}</Text>
+                  <TouchableOpacity
+                    style={styles.changeImageButton}
+                    onPress={() => {
+                      setSelectedImage(null);
+                    }}
+                  >
+                    <Ionicons name="refresh" size={16} color="#E8886B" />
+                    <Text style={styles.changeImageText}>Change</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.imageThumbRow}>
+                  <Ionicons name="image" size={18} color="#E8886B" />
+                  <Text style={styles.imageTapHint}>Tap to view full photo</Text>
+                </View>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -408,6 +519,36 @@ const pickImage = async () => {
           <Text style={styles.submitButtonText}>Submit Deal</Text>
         </TouchableOpacity>
       </View>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={imageModalVisible}
+        onRequestClose={() => setImageModalVisible(false)}
+      >
+        <Pressable style={styles.imageModalOverlay} onPress={() => setImageModalVisible(false)}>
+          <View style={styles.imageModalContent}>
+            <Ionicons
+              name="close-circle"
+              size={34}
+              color="#FFFFFF"
+              style={styles.imageModalClose}
+            />
+            {selectedImage && (
+              <Image source={{ uri: selectedImage }} style={styles.imageModalImage} resizeMode="contain" />
+            )}
+          </View>
+        </Pressable>
+      </Modal>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={!!loadingPicker}
+      >
+        <View style={styles.galleryOverlay}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.galleryOverlayText}>{loadingPicker}</Text>
+        </View>
+      </Modal>
     </SafeAreaProvider>
   );
 }
@@ -490,6 +631,96 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 1,
   },
+  cameraPrewarm: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  cameraWrap: {
+    width: '100%',
+    height: 460,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#111827',
+  },
+  cameraPreview: {
+    flex: 1,
+  },
+  cameraTopControls: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    top: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cameraTopButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+  },
+  cameraTopText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  cameraControls: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  cameraControlButton: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+  },
+  cameraControlText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  shutterButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shutterOuter: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  shutterInner: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+  },
+  pickerLoading: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    gap: 12,
+  },
+  pickerLoadingText: {
+    color: '#E8886B',
+    fontSize: 16,
+    fontWeight: '500',
+  },
   buttonRow: {
     flexDirection: 'row',
     width: '100%',
@@ -531,6 +762,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
   },
+  imagePreviewCard: {
+    marginTop: 6,
+  },
   imageLabel: {
     fontSize: 14,
     color: "#666",
@@ -540,6 +774,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  imageThumbRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  imageTapHint: {
+    fontSize: 12,
+    color: '#666',
   },
   imageFileName: {
     fontSize: 14,
@@ -561,6 +805,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#E8886B",
     fontWeight: "500",
+  },
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalImage: {
+    width: '94%',
+    height: '84%',
+  },
+  imageModalClose: {
+    position: 'absolute',
+    top: 30,
+    right: 18,
+  },
+  galleryOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  galleryOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   submitButton: {
     flexDirection: "row",

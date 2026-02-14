@@ -24,6 +24,7 @@ export default function UploadMenuScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedDocId, setUploadedDocId] = useState<string | null>(null);
+  const [loadingPicker, setLoadingPicker] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // 🌀 Spinner animation setup
@@ -62,42 +63,80 @@ export default function UploadMenuScreen() {
     }, [fadeAnim])
   );
 
-  // 📸 Take photo using camera
+  // Preflight permissions to reduce delay on first open
+  useEffect(() => {
+    (async () => {
+      try {
+        const [cam, lib] = await Promise.all([
+          ImagePicker.getCameraPermissionsAsync(),
+          ImagePicker.getMediaLibraryPermissionsAsync(),
+        ]);
+        await Promise.all([
+          cam.status === 'undetermined' ? ImagePicker.requestCameraPermissionsAsync() : Promise.resolve(),
+          lib.status === 'undetermined' ? ImagePicker.requestMediaLibraryPermissionsAsync() : Promise.resolve(),
+        ]);
+      } catch (e) {
+        // Ignore; permission requests will be retried on action
+      }
+    })();
+  }, []);
+
+  // 📸 Take photo using native camera
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant camera permission');
-      return;
-    }
+    setLoadingPicker('Opening camera...');
+    try {
+      const { status } = await ImagePicker.getCameraPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: newStatus } = await ImagePicker.requestCameraPermissionsAsync();
+        if (newStatus !== 'granted') {
+          Alert.alert('Permission needed', 'Please grant camera permission');
+          return;
+        }
+      }
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.7,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
-      setUploadedDocId(null);
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImage(result.assets[0].uri);
+        setUploadedDocId(null);
+      }
+    } catch (e: any) {
+      Alert.alert('Camera error', e?.message ?? 'Failed to open camera');
+    } finally {
+      setLoadingPicker(null);
     }
   };
 
   // 🖼 Pick image from gallery
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant media library permission');
-      return;
-    }
+    setLoadingPicker('Opening gallery...');
+    try {
+      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (newStatus !== 'granted') {
+          Alert.alert('Permission needed', 'Please grant media library permission');
+          return;
+        }
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.7,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
-      setUploadedDocId(null);
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImage(result.assets[0].uri);
+        setUploadedDocId(null);
+      }
+    } catch (e: any) {
+      Alert.alert('Gallery error', e?.message ?? 'Failed to open gallery');
+    } finally {
+      setLoadingPicker(null);
     }
   };
 
@@ -226,17 +265,24 @@ export default function UploadMenuScreen() {
 
         {!selectedImage ? (
           <View style={styles.uploadSection}>
-            <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
-                <Text style={styles.cameraIcon}>📷</Text>
-                <Text style={styles.buttonText}>Camera</Text>
-              </TouchableOpacity>
+            {loadingPicker ? (
+              <View style={styles.pickerLoading}>
+                <ActivityIndicator size="large" color="#E8886B" />
+                <Text style={styles.pickerLoadingText}>{loadingPicker}</Text>
+              </View>
+            ) : (
+              <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.cameraButton} onPress={takePhoto}>
+                  <Text style={styles.cameraIcon}>📷</Text>
+                  <Text style={styles.buttonText}>Camera</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
-                <Text style={styles.galleryIcon}>🖼️</Text>
-                <Text style={styles.buttonText}>Gallery</Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
+                  <Text style={styles.galleryIcon}>🖼️</Text>
+                  <Text style={styles.buttonText}>Gallery</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.previewSection}>
@@ -317,6 +363,16 @@ const styles = StyleSheet.create({
     padding: 30,
     alignItems: 'center',
     elevation: 1,
+  },
+  pickerLoading: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    gap: 12,
+  },
+  pickerLoadingText: {
+    color: '#E8886B',
+    fontSize: 16,
+    fontWeight: '500',
   },
   buttonRow: {
     flexDirection: 'row',

@@ -105,6 +105,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="UploadDeal"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="Splash"
         options={{
           href: null,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, ScrollView, ActivityIndicator, Text, TextInput, TouchableOpacity, Platform, Dimensions, Animated, PanResponder, FlatList, Keyboard, Modal } from 'react-native';
-import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Callout, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -116,7 +116,7 @@ export default function MapScreen() {
 
   const sliderTrackLeft = useRef(0);
   const sliderMin = 1;
-  const sliderMax = 100;
+  const sliderMax = 25;
   const sliderUnlimitedThreshold = 0.98;
   const sliderThumbSize = 32;
   const sliderHalfThumb = sliderThumbSize / 2;
@@ -407,6 +407,13 @@ export default function MapScreen() {
         showsMyLocationButton={false}
       >
         <Marker coordinate={region} title="You Are Here" />
+        <Circle 
+          center={region}
+          radius={Number.isFinite(maxDistanceMi) ? maxDistanceMi * 1609.34: maxDistanceMi}
+          strokeWidth={2}
+          strokeColor="#3399ff"
+          fillColor="rgba(51, 153, 255, 0.2)"
+        />
 
         {venues.map(v => {
           const coords = getCoords(v);

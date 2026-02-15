@@ -303,6 +303,12 @@ const pickImage = async () => {
                   getCurrentLocation();
                 }
               }}
+              onFail={(error) => console.log("Places API Error:", error)}
+              onNotFound={() => console.log("No results found")}
+              requestUrl={{
+                useOnPlatform: 'all',
+                url: 'https://maps.googleapis.com/maps/api/place/autocomplete/json',
+              }}
               query={{
                 key: apiKey,
                 language: "en",
@@ -352,7 +358,7 @@ const pickImage = async () => {
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.08,
                   shadowRadius: 4,
-                  zIndex: 999,
+                  zIndex: 9999,
                   overflow: "hidden",
                 },
                 row: {
@@ -585,7 +591,8 @@ const styles = StyleSheet.create({
   },
   searchBlock: {
     position: "relative",
-    zIndex: 10,
+    zIndex: 1000,
+    elevation: 1000,
   },
   searchIcon: {
     position: "absolute",

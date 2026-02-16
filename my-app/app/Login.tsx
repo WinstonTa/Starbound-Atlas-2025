@@ -103,7 +103,7 @@ export default function LoginScreen() {
 
       await saveUserToFirestore(userCredential.user);
 
-      showCelebration('Cheers! 🍹', `Welcome aboard, ${userCredential.user.displayName || 'friend'}!`, '/map');
+      showCelebration('Cheers! 🍹', `Welcome aboard, ${userCredential.user.displayName || 'friend'}!`, '/Map');
     } catch (error: any) {
       console.error('Google Sign-In Error:', error);
 
@@ -141,7 +141,7 @@ export default function LoginScreen() {
       // Update last login time in Firestore
       await saveUserToFirestore(userCredential.user);
 
-      showCelebration('Cheers! 🍻', `Great to see you again, ${userCredential.user.displayName || 'friend'}!`, '/map');
+      showCelebration('Cheers! 🍻', `Great to see you again, ${userCredential.user.displayName || 'friend'}!`, '/Map');
     } catch (error: any) {
       console.error('Login Error:', error);
 
@@ -263,7 +263,7 @@ export default function LoginScreen() {
         {/* Sign Up Link */}
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/signup')}>
+          <TouchableOpacity onPress={() => router.push('/Signup')}>
             <Text style={styles.signUpLink}>Sign Up</Text>
           </TouchableOpacity>
         </View>

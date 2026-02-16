@@ -50,6 +50,7 @@ export default function MapScreen() {
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [searchedVenue, setSearchedVenue] = useState<Venue | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [locationButtonState, setLocationButtonState] = useState<'idle' | 'centered' | 'tilted'>('idle');
   const geocodeCache = useRef<Record<string, { latitude: number; longitude: number }>>({});
   const unsubRef = useRef<() => void | null>(null);
   const mapRef = useRef<any>(null);
@@ -171,11 +172,13 @@ export default function MapScreen() {
         }
         const loc = await Location.getCurrentPositionAsync({});
         setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+        // Zoom out enough to show the full radius (10mi ≈ 0.29° lat)
+        const radiusDeg = (maxDistanceMi / 69) * 2.5;
         const r = {
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
+          latitudeDelta: radiusDeg,
+          longitudeDelta: radiusDeg,
         };
         setRegion(r);
         sub = await Location.watchPositionAsync(
@@ -441,6 +444,9 @@ export default function MapScreen() {
         showsUserLocation
         followsUserLocation
         showsMyLocationButton={false}
+        onPanDrag={() => {
+          if (locationButtonState !== 'idle') setLocationButtonState('idle');
+        }}
       >
         {userLocation && 
          typeof userLocation.latitude === 'number' && 
@@ -647,19 +653,12 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Center user button (Google Maps-style) */}
-      <Animated.View
-        pointerEvents={sheetState === 'hidden' ? 'auto' : 'none'}
-        style={[
-          styles.centerButtonWrap,
-          {
-            opacity: sheetState === 'hidden' ? 1 : 0,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.centerButton}
-          onPress={async () => {
+      {/* Location button (Google Maps-style: idle → centered 2D → tilted 3D → back) */}
+      <TouchableOpacity
+        style={styles.locationButton}
+        onPress={async () => {
+          if (locationButtonState === 'idle') {
+            // Center on user location (2D)
             let coords = userLocation;
             if (!coords) {
               try {
@@ -673,14 +672,69 @@ export default function MapScreen() {
             if (coords) {
               const r = { latitude: coords.latitude, longitude: coords.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 };
               setRegion(r);
-              try { mapRef.current?.animateToRegion(r, 500); } catch {}
+              try {
+                mapRef.current?.animateCamera({ center: coords, pitch: 0, heading: 0, zoom: 16 }, { duration: 500 });
+              } catch {
+                try { mapRef.current?.animateToRegion(r, 500); } catch {}
+              }
             }
-          }}
-          accessibilityLabel="Center on your location"
-        >
-          <MaterialCommunityIcons name="crosshairs-gps" size={22} color="#1E1F24" />
-        </TouchableOpacity>
-      </Animated.View>
+            setLocationButtonState('centered');
+          } else if (locationButtonState === 'centered') {
+            // Tilt to 3D
+            let coords = userLocation;
+            if (!coords) {
+              try {
+                const loc = await Location.getCurrentPositionAsync({});
+                coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+                setUserLocation(coords);
+              } catch (e) {
+                console.warn('Failed to get current location', e);
+              }
+            }
+            if (coords) {
+              try {
+                mapRef.current?.animateCamera({ center: coords, pitch: 60, heading: 0, zoom: 18 }, { duration: 500 });
+              } catch {}
+            }
+            setLocationButtonState('tilted');
+          } else {
+            // Back to centered 2D
+            let coords = userLocation;
+            if (!coords) {
+              try {
+                const loc = await Location.getCurrentPositionAsync({});
+                coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+                setUserLocation(coords);
+              } catch (e) {
+                console.warn('Failed to get current location', e);
+              }
+            }
+            if (coords) {
+              const r = { latitude: coords.latitude, longitude: coords.longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+              setRegion(r);
+              try {
+                mapRef.current?.animateCamera({ center: coords, pitch: 0, heading: 0, zoom: 16 }, { duration: 500 });
+              } catch {
+                try { mapRef.current?.animateToRegion(r, 500); } catch {}
+              }
+            }
+            setLocationButtonState('centered');
+          }
+        }}
+        accessibilityLabel={
+          locationButtonState === 'idle' ? 'Center on your location' :
+          locationButtonState === 'centered' ? 'Switch to 3D view' : 'Switch to 2D view'
+        }
+      >
+        <MaterialCommunityIcons
+          name={
+            locationButtonState === 'idle' ? 'crosshairs' :
+            locationButtonState === 'centered' ? 'crosshairs-gps' : 'rotate-3d-variant'
+          }
+          size={22}
+          color={locationButtonState === 'idle' ? '#666' : '#4285F4'}
+        />
+      </TouchableOpacity>
 
       {/* Draggable list overlay */}
       <Animated.View
@@ -998,14 +1052,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6C7280',
   },
-  centerButtonWrap: {
+  locationButton: {
     position: 'absolute',
     right: 14,
-    top: '68%',
-    transform: [{ translateY: -22 }],
-    zIndex: 12,
-  },
-  centerButton: {
+    bottom: 280,
+    zIndex: 1,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -1013,16 +1064,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 6,
   },
   sheet: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
+    zIndex: 10,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,

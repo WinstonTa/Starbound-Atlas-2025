@@ -129,7 +129,7 @@ export default function SignUpScreen() {
 
       await saveUserToFirestore(userCredential.user);
 
-      showCelebration('Cheers! 🎉', `Welcome to HappyMapper, ${userCredential.user.displayName || 'friend'}!`, '/map');
+      showCelebration('Cheers! 🎉', `Welcome to HappyMapper, ${userCredential.user.displayName || 'friend'}!`, '/Map');
     } catch (error: any) {
       console.error('Google Sign-In Error:', error);
 
@@ -221,7 +221,7 @@ export default function SignUpScreen() {
       setDisplayName('');
       setPasswordFocused(false);
 
-      showCelebration('Cheers! 🥂', `Welcome to HappyMapper, ${trimmedDisplayName}!`, '/map');
+      showCelebration('Cheers! 🥂', `Welcome to HappyMapper, ${trimmedDisplayName}!`, '/Map');
     } catch (error: any) {
       console.error('Sign-Up Error:', error);
 

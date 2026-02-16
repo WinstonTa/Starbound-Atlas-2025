@@ -401,10 +401,10 @@ export default function MapScreen() {
         followsUserLocation
         showsMyLocationButton={false}
       >
-        <Marker coordinate={region} title="You Are Here" />
+        <Marker coordinate={userLocation} title="You Are Here" />
         {showRadius && (
           <Circle 
-            center={region}
+            center={userLocation}
             radius={maxDistanceMi * 1609.34}
             strokeWidth={2}
             strokeColor="#3399ff"
@@ -626,6 +626,12 @@ export default function MapScreen() {
             keyExtractor={(item: any) => item.venue.venue_id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.sheetList}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No nearby restaurants found</Text>
+                <Text style={styles.emptySubtext}>Try increasing the search distance</Text>
+              </View>
+            }
             ListHeaderComponent={
               <View style={styles.filterRow}>
                 <View style={styles.filterChip}>
@@ -1136,6 +1142,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#2B2F36',
     marginTop: 6,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    minHeight: 400,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E1F24',
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#6C7280',
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
 

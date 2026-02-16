@@ -178,7 +178,18 @@ export default function UploadMenuScreen() {
         body: formData,
       });
 
-      const result = await uploadResponse.json();
+      const rawBody = await uploadResponse.text();
+      let result: any = null;
+      try {
+        result = rawBody ? JSON.parse(rawBody) : null;
+      } catch {
+        const preview = rawBody?.slice(0, 120) || 'No response body';
+        throw new Error(`Server returned non-JSON (${uploadResponse.status}): ${preview}`);
+      }
+
+      if (!uploadResponse.ok) {
+        throw new Error(result?.error || `Upload failed (${uploadResponse.status})`);
+      }
       if (result.success) {
         setUploadedDocId(result.document_id);
 

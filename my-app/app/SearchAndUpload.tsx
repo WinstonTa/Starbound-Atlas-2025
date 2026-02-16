@@ -9,6 +9,7 @@ import {
   Modal,
   Pressable,
   Image,
+  AppState,
 } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
@@ -31,6 +32,7 @@ export default function SearchAndUpload() {
   const [userLocation, setUserLocation] = useState(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [loadingPicker, setLoadingPicker] = useState<string | null>(null);
+  const [galleryInProgress, setGalleryInProgress] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [cameraFacing, setCameraFacing] = useState<'back' | 'front'>('back');
@@ -38,6 +40,8 @@ export default function SearchAndUpload() {
   const [prewarmCamera, setPrewarmCamera] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const insets = useSafeAreaInsets();
+  const appStateRef = useRef(AppState.currentState);
+
 
   useEffect(() => {
     (async () => {
@@ -55,6 +59,22 @@ export default function SearchAndUpload() {
       }
     })();
   }, []);
+
+  // Some Android gallery pickers may not always resolve on cancel.
+  // Clear transient loading state when app returns to foreground.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      const wasBackground = appStateRef.current.match(/inactive|background/);
+      appStateRef.current = nextState;
+      if (wasBackground && nextState === 'active' && galleryInProgress) {
+        setGalleryInProgress(false);
+        setLoadingPicker(null);
+      }
+    });
+    return () => {
+      sub.remove();
+    };
+  }, [galleryInProgress]);
 
   // Get user location for form
   const getCurrentLocation = async () => {
@@ -100,7 +120,7 @@ export default function SearchAndUpload() {
     if (!cameraRef.current) return;
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7,
+        quality: 0.45,
         skipProcessing: true,
       });
       if (photo?.uri) {
@@ -116,6 +136,7 @@ export default function SearchAndUpload() {
 const pickImage = async () => {
   setLoadingPicker('Cooking...');
   setShowCamera(false);
+  setGalleryInProgress(true);
   try {
       const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -129,11 +150,13 @@ const pickImage = async () => {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
-        quality: 0.7,
+        quality: 0.45,
+        exif: false,
       });
 
     if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setSelectedImage(uri);
     } else {
       setSelectedImage(null);
       setShowCamera(false);
@@ -141,6 +164,7 @@ const pickImage = async () => {
     } catch (e: any) {
       Alert.alert('Gallery error', e?.message ?? 'Failed to open gallery');
     } finally {
+      setGalleryInProgress(false);
       setLoadingPicker(null);
     }
   };
@@ -230,7 +254,18 @@ const pickImage = async () => {
         body: formData,
       });
 
-      const result = await uploadResponse.json();
+      const rawBody = await uploadResponse.text();
+      let result: any = null;
+      try {
+        result = rawBody ? JSON.parse(rawBody) : null;
+      } catch {
+        const preview = rawBody?.slice(0, 120) || 'No response body';
+        throw new Error(`Server returned non-JSON (${uploadResponse.status}): ${preview}`);
+      }
+
+      if (!uploadResponse.ok) {
+        throw new Error(result?.error || `Upload failed (${uploadResponse.status})`);
+      }
       
       if (result.success) {
         // Track in user's addedDeals

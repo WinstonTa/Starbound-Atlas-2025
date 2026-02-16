@@ -8,15 +8,25 @@ export default function StartupScreen() {
 
   // if the user is logged in, go straight to the /map screen
   useEffect(() => {
+    let isActive = true;
+    const startedAt = Date.now();
+
     const unsubscribe = auth().onAuthStateChanged(user => {
-      if (user) {
-        router.replace('/Map');
-      } else {
-        router.replace('/Login');
-      }
+      const target = user ? '/Map' : '/Login';
+      const elapsed = Date.now() - startedAt;
+      const delay = Math.max(0, 3000 - elapsed);
+
+      setTimeout(() => {
+        if (isActive) {
+          router.replace(target);
+        }
+      }, delay);
     });
 
-    return unsubscribe;
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
   }, [router]);
 
   return (

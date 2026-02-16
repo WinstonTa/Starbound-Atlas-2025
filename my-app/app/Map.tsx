@@ -48,6 +48,7 @@ export default function MapScreen() {
   const [maxDistanceMi, setMaxDistanceMi] = useState<number>(10);
   const [showRadius, setShowRadius] = useState(true);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+  const [searchedVenue, setSearchedVenue] = useState<Venue | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const geocodeCache = useRef<Record<string, { latitude: number; longitude: number }>>({});
   const unsubRef = useRef<() => void | null>(null);
@@ -303,23 +304,60 @@ export default function MapScreen() {
 
   const nearbyVenues = useMemo(() => {
     if (!region && !userLocation) return [];
-    const origin = userLocation ?? { latitude: region!.latitude, longitude: region!.longitude };
+    
+    // Validate origin has valid coordinates
+    const originCandidate = userLocation ?? { latitude: region!.latitude, longitude: region!.longitude };
+    if (!originCandidate || 
+        typeof originCandidate.latitude !== 'number' ||
+        typeof originCandidate.longitude !== 'number' ||
+        isNaN(originCandidate.latitude) ||
+        isNaN(originCandidate.longitude)) {
+      return [];
+    }
+    
+    const origin = originCandidate;
     const withDistance = venues
       .map(v => {
         const coords = getCoords(v);
         if (!coords) return null;
+        
+        // Validate coordinates are valid numbers
+        if (typeof coords.latitude !== 'number' ||
+            typeof coords.longitude !== 'number' ||
+            isNaN(coords.latitude) ||
+            isNaN(coords.longitude)) {
+          return null;
+        }
+        
         const distanceMi = haversineDistance(origin, coords);
         return { venue: v, coords, distanceMi };
       })
-      .filter(Boolean);
+      .filter((item): item is { venue: Venue; coords: { latitude: number; longitude: number }; distanceMi: number } => 
+        item !== null && 
+        item.coords !== null && 
+        typeof item.coords.latitude === 'number' && 
+        typeof item.coords.longitude === 'number' &&
+        !isNaN(item.coords.latitude) &&
+        !isNaN(item.coords.longitude)
+      );
 
-    return withDistance
-      .filter((item: any) => item.distanceMi <= maxDistanceMi)
-      .sort((a: any, b: any) => {
+    // Filter by distance, but always include searched venue
+    const filtered = withDistance
+      .filter((item) => {
+        // Always include the searched venue
+        if (searchedVenue && item.venue.venue_id === searchedVenue.venue_id) {
+          return true;
+        }
+        // Otherwise filter by distance
+        return item.distanceMi <= maxDistanceMi;
+      })
+      .sort((a, b) => {
         const delta = a.distanceMi - b.distanceMi;
         return sortOrder === 'asc' ? delta : -delta;
       });
-  }, [venues, region, sortKey, maxDistanceMi, sortOrder]);
+
+    return filtered;
+  }, [venues, region, sortKey, maxDistanceMi, sortOrder, searchedVenue, userLocation]);
 
   async function handleSearchSubmit() {
     const q = query.trim();
@@ -356,6 +394,9 @@ export default function MapScreen() {
         if (lat != null && lng != null) {
           const r = { latitude: lat, longitude: lng, latitudeDelta: 0.02, longitudeDelta: 0.02 };
           setRegion(r);
+          setSearchedVenue({ ...chosen, latitude: lat, longitude: lng });
+          // Keep the venue name in the search bar
+          setQuery(chosen.venue_name ?? '');
           try { mapRef.current?.animateToRegion(r, 500); } catch {}
         }
       }
@@ -401,35 +442,78 @@ export default function MapScreen() {
         followsUserLocation
         showsMyLocationButton={false}
       >
-        <Marker coordinate={userLocation} title="You Are Here" />
-        {showRadius && (
-          <Circle 
-            center={userLocation}
-            radius={maxDistanceMi * 1609.34}
-            strokeWidth={2}
-            strokeColor="#3399ff"
-            fillColor="rgba(51, 153, 255, 0.2)"
-          />
-        )}
+        {userLocation && 
+         typeof userLocation.latitude === 'number' && 
+         typeof userLocation.longitude === 'number' &&
+         !isNaN(userLocation.latitude) &&
+         !isNaN(userLocation.longitude) && (() => {
+           const stableUserCoords = {
+             latitude: Number(userLocation.latitude),
+             longitude: Number(userLocation.longitude)
+           };
+           return (
+             <Marker 
+               key="user-location"
+               coordinate={stableUserCoords} 
+               title="You Are Here" 
+               tracksViewChanges={false}
+               stopPropagation={true}
+             />
+           );
+         })()}
+        {showRadius && 
+         userLocation && 
+         typeof userLocation.latitude === 'number' && 
+         typeof userLocation.longitude === 'number' &&
+         !isNaN(userLocation.latitude) &&
+         !isNaN(userLocation.longitude) && (() => {
+           const stableUserCoords = {
+             latitude: Number(userLocation.latitude),
+             longitude: Number(userLocation.longitude)
+           };
+           return (
+             <Circle 
+               key="radius-circle"
+               center={stableUserCoords}
+               radius={maxDistanceMi * 1609.34}
+               strokeWidth={2}
+               strokeColor="#3399ff"
+               fillColor="rgba(51, 153, 255, 0.2)"
+             />
+           );
+         })()}
 
         {nearbyVenues.map((item: any) => {
           const v = item.venue;
           const coords = item.coords;
-          if (!coords) return null;
+          
+          // Strict coordinate validation
+          if (!coords || 
+              typeof coords.latitude !== 'number' || 
+              typeof coords.longitude !== 'number' ||
+              isNaN(coords.latitude) || 
+              isNaN(coords.longitude)) {
+            return null;
+          }
 
           const addressText = formatAddress(v.address);
           const dealText = formatFirstDeal(v.deals);
           const calloutText = [addressText, dealText].filter(Boolean).join('\n\n');
 
+          // Create stable coordinate object
+          const stableCoords = { 
+            latitude: Number(coords.latitude), 
+            longitude: Number(coords.longitude) 
+          };
+
           return (
             <Marker
-              key={v.venue_id}
-              ref={ref => { markerRefs.current[v.venue_id] = ref; }}
-              coordinate={coords}
+              key={`marker-${v.venue_id}`}
+              coordinate={stableCoords}
               title={v.venue_name ?? 'Venue'}
-              // Use default Android info window; custom callout on iOS
               description={Platform.OS === 'android' ? (calloutText || 'No address or deal info available') : undefined}
-              tracksViewChanges={Platform.OS === 'ios'}  // disable the problematic optimization on Android
+              tracksViewChanges={false}
+              stopPropagation={true}
               onPress={() => {
                 if (Platform.OS === 'android') {
                   requestAnimationFrame(() => {
@@ -449,6 +533,45 @@ export default function MapScreen() {
             </Marker>
           );
         })}
+
+        {(() => {
+          if (!searchedVenue || 
+              searchedVenue.latitude == null || 
+              searchedVenue.longitude == null ||
+              typeof searchedVenue.latitude !== 'number' ||
+              typeof searchedVenue.longitude !== 'number' ||
+              isNaN(searchedVenue.latitude) ||
+              isNaN(searchedVenue.longitude)) {
+            return null;
+          }
+          
+          const stableCoords = { 
+            latitude: Number(searchedVenue.latitude), 
+            longitude: Number(searchedVenue.longitude) 
+          };
+          const addressText = formatAddress(searchedVenue.address);
+          const dealText = formatFirstDeal(searchedVenue.deals);
+          const calloutText = [addressText, dealText].filter(Boolean).join('\n\n');
+          return (
+            <Marker
+              key={`searched-${searchedVenue.venue_id}`}
+              coordinate={stableCoords}
+              title={searchedVenue.venue_name ?? 'Venue'}
+              description={Platform.OS === 'android' ? (calloutText || 'No address or deal info available') : undefined}
+              tracksViewChanges={false}
+              stopPropagation={true}
+            >
+              {Platform.OS === 'ios' && (
+                <Callout tooltip={false}>
+                  <View style={{ maxWidth: 260, padding: 8 }}>
+                    <Text style={{ fontWeight: '700', marginBottom: 4 }}>{searchedVenue.venue_name ?? 'Venue'}</Text>
+                    <Text>{calloutText || 'No address or deal info available'}</Text>
+                  </View>
+                </Callout>
+              )}
+            </Marker>
+          );
+        })()}
       </MapView>
       {/* Search bar overlay */}
       <View
@@ -461,15 +584,32 @@ export default function MapScreen() {
           onChangeText={(text) => {
             setQuery(text);
             setShowSuggestions(text.trim().length > 0);
+            // Clear searched venue if user starts typing again
+            if (searchedVenue && text !== searchedVenue.venue_name) {
+              setSearchedVenue(null);
+            }
           }}
           onSubmitEditing={handleSearchSubmit}
           returnKeyType="search"
           style={styles.searchInput}
-          clearButtonMode="while-editing"
+          clearButtonMode="never"
           accessible={true}
           importantForAutofill="yes"
           onFocus={() => setShowSuggestions(query.trim().length > 0)}
         />
+        {searchedVenue && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={() => {
+              setSearchedVenue(null);
+              setQuery('');
+              setShowSuggestions(false);
+            }}
+            accessibilityLabel="Clear search"
+          >
+            <Ionicons name="close-circle" size={20} color="#6C7280" />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={styles.searchButton} onPress={handleSearchSubmit} accessibilityLabel="Search">
           <Text style={{ color: '#fff', fontWeight: '700' }}>Search</Text>
         </TouchableOpacity>
@@ -481,15 +621,19 @@ export default function MapScreen() {
               key={s.venue.venue_id}
               style={styles.suggestionItem}
               onPress={() => {
-                setQuery(s.title);
-                setShowSuggestions(false);
-                Keyboard.dismiss();
                 const coords = getCoords(s.venue);
                 if (coords) {
                   const r = { latitude: coords.latitude, longitude: coords.longitude, latitudeDelta: 0.02, longitudeDelta: 0.02 };
                   setRegion(r);
+                  setSearchedVenue({ ...s.venue, latitude: coords.latitude, longitude: coords.longitude });
+                  setQuery(s.title); // Keep the venue name in search bar
+                  setShowSuggestions(false);
+                  Keyboard.dismiss();
                   try { mapRef.current?.animateToRegion(r, 500); } catch {}
                 } else {
+                  setQuery(s.title);
+                  setShowSuggestions(false);
+                  Keyboard.dismiss();
                   handleSearchSubmit();
                 }
               }}
@@ -809,6 +953,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 8,
     fontSize: 14,
+  },
+  clearButton: {
+    marginLeft: 4,
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchButton: {
     marginLeft: 8,
@@ -1163,4 +1313,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

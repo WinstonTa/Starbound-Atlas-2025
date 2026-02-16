@@ -71,7 +71,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="search-and-upload"
+        name="SearchAndUpload"
         options={{
           title: 'Add Deal',
           tabBarLabel: 'Add Deal',

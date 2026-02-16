@@ -412,8 +412,9 @@ export default function MapScreen() {
           />
         )}
 
-        {venues.map(v => {
-          const coords = getCoords(v);
+        {nearbyVenues.map((item: any) => {
+          const v = item.venue;
+          const coords = item.coords;
           if (!coords) return null;
 
           const addressText = formatAddress(v.address);

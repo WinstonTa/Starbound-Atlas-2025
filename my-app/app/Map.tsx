@@ -46,6 +46,7 @@ export default function MapScreen() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [sheetState, setSheetState] = useState<'open' | 'peek' | 'hidden'>('peek');
   const [maxDistanceMi, setMaxDistanceMi] = useState<number>(10);
+  const [showRadius, setShowRadius] = useState(true);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const geocodeCache = useRef<Record<string, { latitude: number; longitude: number }>>({});
@@ -117,7 +118,6 @@ export default function MapScreen() {
   const sliderTrackLeft = useRef(0);
   const sliderMin = 1;
   const sliderMax = 25;
-  const sliderUnlimitedThreshold = 0.98;
   const sliderThumbSize = 32;
   const sliderHalfThumb = sliderThumbSize / 2;
   const sliderFillWidth = useMemo(
@@ -128,19 +128,14 @@ export default function MapScreen() {
     if (!sliderTrackWidth.current) return maxDistanceMi;
     const maxX = Math.max(1, sliderTrackWidth.current - sliderThumbSize);
     const ratio = x / maxX;
-    if (ratio >= sliderUnlimitedThreshold) return Number.POSITIVE_INFINITY;
-    const clampedRatio = Math.min(1, Math.max(0, ratio / sliderUnlimitedThreshold));
+    const clampedRatio = Math.min(1, Math.max(0, ratio));
     return Math.round(sliderMin + clampedRatio * (sliderMax - sliderMin));
   };
   const sliderXFromValue = (value: number) => {
     if (!sliderTrackWidth.current) return 0;
     const maxX = Math.max(1, sliderTrackWidth.current - sliderThumbSize);
-    if (!Number.isFinite(value)) return maxX;
     const ratio = (value - sliderMin) / (sliderMax - sliderMin);
-    return Math.min(
-      maxX * sliderUnlimitedThreshold,
-      Math.max(0, ratio * maxX * sliderUnlimitedThreshold)
-    );
+    return Math.max(0, Math.min(maxX, ratio * maxX));
   };
 
   const suggestions = useMemo(() => {
@@ -319,7 +314,7 @@ export default function MapScreen() {
       .filter(Boolean);
 
     return withDistance
-      .filter((item: any) => !Number.isFinite(maxDistanceMi) || item.distanceMi <= maxDistanceMi)
+      .filter((item: any) => item.distanceMi <= maxDistanceMi)
       .sort((a: any, b: any) => {
         const delta = a.distanceMi - b.distanceMi;
         return sortOrder === 'asc' ? delta : -delta;
@@ -407,13 +402,15 @@ export default function MapScreen() {
         showsMyLocationButton={false}
       >
         <Marker coordinate={region} title="You Are Here" />
-        <Circle 
-          center={region}
-          radius={Number.isFinite(maxDistanceMi) ? maxDistanceMi * 1609.34: maxDistanceMi}
-          strokeWidth={2}
-          strokeColor="#3399ff"
-          fillColor="rgba(51, 153, 255, 0.2)"
-        />
+        {showRadius && (
+          <Circle 
+            center={region}
+            radius={maxDistanceMi * 1609.34}
+            strokeWidth={2}
+            strokeColor="#3399ff"
+            fillColor="rgba(51, 153, 255, 0.2)"
+          />
+        )}
 
         {venues.map(v => {
           const coords = getCoords(v);
@@ -650,9 +647,17 @@ export default function MapScreen() {
                       {...sliderPanResponder.panHandlers}
                     />
                   </View>
-                  <Text style={styles.filterValue}>
-                    {Number.isFinite(maxDistanceMi) ? `${Math.round(maxDistanceMi)} mi` : 'Unlimited'}
-                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.filterValue}>{Math.round(maxDistanceMi)} mi</Text>
+                    <TouchableOpacity
+                      onPress={() => setShowRadius(!showRadius)}
+                      style={[styles.radiusToggle, showRadius && styles.radiusToggleActive]}
+                    >
+                      <Text style={[styles.radiusToggleText, showRadius && styles.radiusToggleTextActive]}>
+                        {showRadius ? 'Hide Radius' : 'Show Radius'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             }
@@ -683,7 +688,19 @@ export default function MapScreen() {
                 >
                   <View style={styles.venueImageWrap}>
                     {item.venue.image_url ? (
-                      <Image source={{ uri: item.venue.image_url }} style={styles.venueImage} contentFit="cover" />
+                      <Image 
+                        source={{ uri: item.venue.image_url }}
+                        style={styles.venueImage}
+                        contentFit="cover"
+                        onError={(error) => {
+                          console.log('Image failed to load:', item.venue.image_url);
+                          console.log('Error details:', error);
+                        }}
+                        onLoad={() => {
+                          console.log('Image successfully loaded:', item.venue.image_url);
+                        }}
+                        // Add cachePolicy if using expo-image
+                        cachePolicy="memory-disk"                      />
                     ) : (
                       <View style={styles.venueImagePlaceholder}>
                         <MaterialCommunityIcons name="image-off-outline" size={20} color="#9AA0AA" />
@@ -929,6 +946,24 @@ const styles = StyleSheet.create({
     color: '#1E1F24',
     marginTop: 6,
     fontWeight: '600',
+  },
+  radiusToggle: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#DCE0E6',
+    marginTop: 6,
+  },
+  radiusToggleActive: {
+    backgroundColor: '#3399ff',
+  },
+  radiusToggleText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#5C6270',
+  },
+  radiusToggleTextActive: {
+    color: '#FFFFFF',
   },
   sliderTrack: {
     height: 30,

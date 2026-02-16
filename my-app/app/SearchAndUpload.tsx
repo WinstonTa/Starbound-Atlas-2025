@@ -303,12 +303,11 @@ const pickImage = async () => {
                   getCurrentLocation();
                 }
               }}
-              onFail={(error) => console.log("Places API Error:", error)}
-              onNotFound={() => console.log("No results found")}
-              requestUrl={{
-                useOnPlatform: 'all',
-                url: 'https://maps.googleapis.com/maps/api/place/autocomplete/json',
+              onFail={(error) => {
+                console.log("Places API Error:", error)
+                Alert.alert('Search Error', 'Could not search for venues. Please try again.');
               }}
+              onNotFound={() => console.log("No results found")}
               query={{
                 key: apiKey,
                 language: "en",

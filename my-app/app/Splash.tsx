@@ -29,7 +29,7 @@ export default function SplashScreen() {
 
     // Navigate after 4 seconds
     const timer = setTimeout(() => {
-      router.replace('/map');
+      router.replace('/Map');
     }, 4000);
 
     return () => {

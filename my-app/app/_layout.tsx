@@ -18,8 +18,8 @@ export default function TabLayout() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const isIndexScreen = pathname === '/' || pathname === '/index';
-  const isLoginScreen = pathname === '/login';
-  const isSignUpScreen = pathname === '/signup';
+  const isLoginScreen = pathname === '/Login';
+  const isSignUpScreen = pathname === '/Signup';
 
   return (
     <FavoritesProvider>
